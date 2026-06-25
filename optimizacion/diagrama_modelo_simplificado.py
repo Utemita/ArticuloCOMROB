@@ -28,6 +28,12 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# Tipografia vectorial (texto editable en el PDF) y buena calidad
+matplotlib.rcParams["pdf.fonttype"] = 42
+matplotlib.rcParams["ps.fonttype"] = 42
+matplotlib.rcParams["svg.fonttype"] = "none"
+matplotlib.rcParams["mathtext.fontset"] = "cm"
+
 import modelo_simplificado as M
 
 # =============================================================================
@@ -161,6 +167,23 @@ def lbl(p1, p2, text, dx=0.0, dy=0.0, fs=FS_LINK):
             fontsize=fs, style="italic", ha="center", va="center", zorder=20)
 
 
+def lbl_seg(p1, p2, text, frac=0.5, dist=0.0, fs=FS_LINK):
+    """Etiqueta sobre un eslabon en una posicion PARAMETRICA del segmento.
+
+    En vez de fijar la etiqueta al punto medio (que apinia las etiquetas de los
+    eslabones que comparten una misma junta, p.ej. L3, L4 y L5 en M4), se ubica
+    a la fraccion 'frac' a lo largo de p1->p2 (0=p1, 1=p2) y se separa del
+    eslabon una distancia perpendicular 'dist' (el signo elige el lado). Asi
+    cada etiqueta queda junto a SU eslabon y lejos del cruce de juntas.
+    """
+    p1 = np.asarray(p1, float)
+    p2 = np.asarray(p2, float)
+    base = p1 + frac * (p2 - p1)
+    o = perp_off(p1, p2, dist)
+    ax.text(base[0] + o[0], base[1] + o[1], text, fontsize=fs,
+            style="italic", ha="center", va="center", zorder=20)
+
+
 def lbl_at(pt, text, dx=0.0, dy=0.0, fs=FS_PT, ha="center", va="center"):
     ax.text(pt[0] + dx, pt[1] + dy, text, fontsize=fs, style="italic",
             ha=ha, va=va, zorder=20)
@@ -211,9 +234,11 @@ ground(G2, size=6)
 off = 6.0
 lbl(G2, T2, r"$L_1$", *perp_off(G2, T2, off))
 lbl(T2, P, r"$L_2$", *perp_off(T2, P, off))
-lbl(M4, P, r"$L_3$", *perp_off(M4, P, off))
-lbl(G1, M4, r"$L_4$", *perp_off(G1, M4, off))
-lbl(M4, S1, r"$L_5$", *perp_off(M4, S1, -off))
+# L3, L4 y L5 comparten la junta M4: se etiquetan a lo largo de cada eslabon,
+# desplazadas hacia su junta lejana y al lado exterior, para no apinarlas en M4.
+lbl_seg(M4, P, r"$L_3$", frac=0.62, dist=-7.0)   # hacia P, lado inferior
+lbl_seg(G1, M4, r"$L_4$", frac=0.34, dist=-7.5)  # hacia G1, lado superior
+lbl_seg(M4, S1, r"$L_5$", frac=0.60, dist=-7.0)  # hacia S1, lado superior
 lbl(P, P2, r"$L_6$", *perp_off(P, P2, off))
 lbl(S2, P2, r"$L_7$", *perp_off(S2, P2, off))
 lbl(P2, P3, r"$L_8$", *perp_off(P2, P3, off))
@@ -251,7 +276,11 @@ mxr, myr = 16, 16
 ax.set_xlim(pts[:, 0].min() - mxr, pts[:, 0].max() + mxr)
 ax.set_ylim(pts[:, 1].min() - myr, pts[:, 1].max() + myr)
 
-out = os.path.join(HERE, "resultados", "diagrama_modelo_simplificado.png")
-plt.savefig(out, dpi=200, bbox_inches="tight", facecolor="white", pad_inches=0.08)
+out_pdf = os.path.join(HERE, "resultados", "diagrama_modelo_simplificado.pdf")
+out_png = os.path.join(HERE, "resultados", "diagrama_modelo_simplificado.png")
+plt.savefig(out_pdf, bbox_inches="tight", facecolor="white", pad_inches=0.08)
+plt.savefig(out_png, dpi=300, bbox_inches="tight", facecolor="white", pad_inches=0.08)
+print(">> Diagrama (PDF vectorial) guardado en:", out_pdf)
+print(">> Diagrama (PNG alta resolucion) guardado en:", out_png)
+
 plt.close()
-print(">> Diagrama guardado en:", out)
