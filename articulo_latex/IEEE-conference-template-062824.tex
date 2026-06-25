@@ -52,14 +52,22 @@ Chamfer ponderada respecto a 120 puntos de captura de movimiento (MOCAP) de un
 agarre de pinza fina ---la oposición entre el pulgar y el índice--- tomados de
 una base de datos de cinemática de la mano \cite{ref_dataset,ref_pizzolato}, a
 la que se añaden una penalización por retrocesos del movimiento y un término que
-favorece dimensiones pequeñas. Bajo un planteamiento idéntico, la misma semilla
-y el mismo número de generaciones, la ED alcanzó un error global de 2.15~mm
-frente a 5.55~mm del AG y, además, produjo un mecanismo más compacto (suma de
-eslabones estructurales de 326.6~mm contra 358.7~mm). Se analiza por qué la ED
-domina en este espacio continuo: su mutación diferencial ajusta el tamaño de sus
-pasos de forma automática, lo que le permite recorrer el espacio de búsqueda y
-afinar la solución mejor que el AG, que mostró convergencia prematura. Los
-resultados respaldan el uso de la ED para esta clase de síntesis dimensional.
+favorece dimensiones pequeñas. Para que la comparación sea justa, los
+hiperparámetros de ambos algoritmos se sintonizaron de manera simétrica con
+Optuna ---empleando el muestreador TPE, la misma semilla y un presupuesto idéntico
+de 25 ensayos por método---, de modo que ninguno se evalúa con ajustes
+arbitrarios. Bajo este planteamiento, con la misma función objetivo, los mismos
+límites y el mismo número de generaciones, la ED alcanzó un error global de
+2.17~mm frente a 2.55~mm del AG y produjo un mecanismo más compacto (suma de
+eslabones estructurales de 347.2~mm contra 457.1~mm). Una vez sintonizado, el AG
+resultó competitivo e incluso ajustó mejor la articulación más distal (IFD:
+1.43~mm contra 1.53~mm de la ED), mientras que la ED conservó la ventaja en el
+error global y en la falange proximal (IFP). Se analiza por qué la ED mantiene
+esa ligera ventaja en un espacio de búsqueda continuo: su mutación diferencial
+ajusta el tamaño de los pasos de forma automática, lo que favorece el
+refinamiento de la solución. Los resultados indican que ambas metaheurísticas
+son adecuadas para esta clase de síntesis dimensional y que la elección concreta
+debe atender al compromiso entre error de ajuste y compacidad del mecanismo.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -223,32 +231,46 @@ el planteamiento.
 \section{Algoritmos de optimización}
 Ambos algoritmos se ejecutaron con la misma semilla aleatoria (42) y el mismo
 número máximo de generaciones (300), de manera que la comparación quede
-controlada. La Tabla~\ref{tab:config} resume los hiperparámetros.
+controlada. Para evitar que el desempeño dependa de hiperparámetros elegidos a
+mano ---una fuente habitual de sesgo al comparar metaheurísticas--- los
+hiperparámetros de cada algoritmo se sintonizaron de forma automática y simétrica
+con Optuna \cite{ref_optuna}, empleando el muestreador por estimación de densidad
+arborescente (TPE, \emph{Tree-structured Parzen Estimator}). El procedimiento es
+idéntico para la ED y el AG: en una primera etapa, Optuna realiza 25 ensayos por
+algoritmo ---mismo presupuesto para los dos--- con corridas cortas que evalúan el
+fitness alcanzado para distintas combinaciones de hiperparámetros; en una segunda
+etapa, la mejor combinación encontrada se emplea en una corrida profunda de 300
+generaciones, cuyos resultados son los que se reportan. La búsqueda de Optuna usa
+la misma semilla (42) en ambos casos, de modo que la sintonización es reproducible
+y equitativa. La Tabla~\ref{tab:config} resume los hiperparámetros resultantes.
 
 \subsection{Evolución Diferencial}
 Se empleó la implementación \texttt{differential\_evolution} de SciPy con la
-estrategia \texttt{best1bin}, tamaño de población relativo $\text{popsize}=15$,
-factor de mutación diferencial con \emph{dithering} en el rango $[0.5,1.0]$,
-recombinación $0.7$ y tolerancia $10^{-7}$. En cada generación, los vectores de
-prueba se construyen a partir del mejor individuo y de la diferencia escalada
-entre dos individuos elegidos al azar. Esta mutación diferencial escala
-automáticamente sus pasos con la dispersión de la población: cuando la población
-está dispersa los pasos son grandes (exploración) y, conforme converge, los
-pasos se reducen (explotación), sin necesidad de ajustar una amplitud de
-mutación fija.
+estrategia \texttt{best1bin}. Los hiperparámetros sintonizados por Optuna fueron
+un tamaño de población relativo $\text{popsize}=28$, factor de mutación
+diferencial con \emph{dithering} en el rango $[0.54,0.85]$ y recombinación
+$0.77$, con tolerancia $10^{-7}$. En cada generación, los vectores de prueba se
+construyen a partir del mejor individuo y de la diferencia escalada entre dos
+individuos elegidos al azar. Esta mutación diferencial escala automáticamente sus
+pasos con la dispersión de la población: cuando la población está dispersa los
+pasos son grandes (exploración) y, conforme converge, los pasos se reducen
+(explotación), sin necesidad de fijar una amplitud de mutación constante.
 
 \subsection{Algoritmo Genético}
 Se implementó un AG real codificado con selección por torneo (tamaño 3), cruza
-binaria simulada (SBX, $\eta_c=15$) \cite{ref_sbx}, mutación polinomial
-($\eta_m=20$), población de 70 individuos, probabilidad de cruza $0.9$,
-probabilidad de mutación $0.15$ y elitismo de 2 individuos. La SBX y la mutación
-polinomial son operadores adecuados para variables continuas, pero sus
-parámetros de distribución son fijos a lo largo de la ejecución. Se aplicó un
-criterio de paro temprano por estancamiento, con una paciencia de 100
-generaciones sin mejora.
+binaria simulada (SBX) \cite{ref_sbx} y mutación polinomial. Los hiperparámetros
+sintonizados por Optuna fueron una población de 52 individuos, probabilidad de
+cruza $0.63$, probabilidad de mutación $0.22$, índices de distribución
+$\eta_c=16$ (SBX) y $\eta_m=14$ (mutación polinomial) y elitismo de 2 individuos.
+La SBX y la mutación polinomial son operadores adecuados para variables
+continuas; sus índices de distribución, antes fijados a mano, aquí los determina
+Optuna junto con el resto de los hiperparámetros. Se aplicó un criterio de paro
+temprano por estancamiento con una paciencia de 100 generaciones sin mejora; en
+la corrida reportada el AG siguió mejorando hasta una fase avanzada y agotó las
+300 generaciones sin activar dicho paro.
 
 \begin{table}[htbp]
-\caption{Configuración de los algoritmos}
+\caption{Configuración de los algoritmos (hiperparámetros sintonizados con Optuna)}
 \begin{center}
 \renewcommand{\arraystretch}{1.15}
 \begin{tabular}{l l}
@@ -256,12 +278,14 @@ generaciones sin mejora.
 \textbf{Evolución Diferencial} & \textbf{Algoritmo Genético} \\
 \midrule
 estrategia: best1bin & selección: torneo (3) \\
-popsize: 15 & población: 70 \\
-mutación: $(0.5,1.0)$ & cruza: SBX ($\eta_c=15$) \\
-recombinación: 0.7 & mutación: polinomial ($\eta_m=20$) \\
+popsize: 28 & población: 52 \\
+mutación: $(0.54,0.85)$ & cruza: SBX ($\eta_c=16$) \\
+recombinación: 0.77 & mutación: polinomial ($\eta_m=14$) \\
 maxiter: 300 & generaciones: 300 \\
-tol: $10^{-7}$ & $p_{cx}=0.9$, $p_{mut}=0.15$ \\
+tol: $10^{-7}$ & $p_{cx}=0.63$, $p_{mut}=0.22$ \\
 semilla: 42 & élite: 2, paciencia: 100 \\
+\midrule
+\multicolumn{2}{l}{Sintonización: Optuna (TPE), 25 ensayos por algoritmo, semilla 42} \\
 \bottomrule
 \end{tabular}
 \label{tab:config}
@@ -272,12 +296,14 @@ semilla: 42 & élite: 2, paciencia: 100 \\
 \section{Resultados}
 \subsection{Error de ajuste}
 La Tabla~\ref{tab:resultados} reúne las métricas de ambas corridas. La ED obtuvo
-un error global de 2.15~mm, sensiblemente menor que los 5.55~mm del AG, con
-mejoras tanto en la IFP como, sobre todo, en la IFD (1.65~mm frente a 7.17~mm).
-La Fig.~\ref{fig:errores} ilustra esta diferencia por articulación: el AG
-concentra su error en la IFD, justo la articulación con mayor peso en la función
-objetivo, lo que confirma que se quedó atrapado en una solución que no logra
-propagar el movimiento de forma adecuada hasta el extremo del mecanismo.
+un error global de 2.17~mm, ligeramente menor que los 2.55~mm del AG. El reparto
+por articulación, ilustrado en la Fig.~\ref{fig:errores}, es revelador: la ED
+ajusta mejor la falange proximal (IFP: 2.82~mm contra 3.68~mm), mientras que el
+AG, una vez sintonizado, reproduce con mayor fidelidad la articulación más distal
+(IFD: 1.43~mm contra 1.53~mm de la ED). En conjunto, las dos soluciones quedan
+muy próximas en error de forma, lo que confirma que ambas metaheurísticas son
+capaces de propagar el movimiento de forma adecuada hasta el extremo del
+mecanismo.
 
 \begin{table}[htbp]
 \caption{Resultados de la optimización (modelo simplificado)}
@@ -287,12 +313,12 @@ propagar el movimiento de forma adecuada hasta el extremo del mecanismo.
 \toprule
 \textbf{Métrica} & \textbf{ED} & \textbf{AG} \\
 \midrule
-Error global (mm)      & \textbf{2.1523} & 5.5486 \\
-Error IFP (mm)         & \textbf{2.6564} & 3.9250 \\
-Error IFD (mm)         & \textbf{1.6482} & 7.1721 \\
-Fitness                & \textbf{0.002366} & 0.006191 \\
-Evaluaciones (nfev)    & 72\,597 & 20\,470 \\
-$\sum$ eslabones estructurales (mm) & \textbf{326.6} & 358.7 \\
+Error global (mm)      & \textbf{2.1736} & 2.5543 \\
+Error IFP (mm)         & \textbf{2.8156} & 3.6813 \\
+Error IFD (mm)         & 1.5317 & \textbf{1.4273} \\
+Fitness                & \textbf{0.002335} & 0.002720 \\
+Evaluaciones (nfev)    & 135\,970 & 15\,052 \\
+$\sum$ eslabones estructurales (mm) & \textbf{347.2} & 457.1 \\
 \bottomrule
 \end{tabular}
 \label{tab:resultados}
@@ -302,7 +328,8 @@ $\sum$ eslabones estructurales (mm) & \textbf{326.6} & 358.7 \\
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.92\columnwidth]{comparacion_errores.png}}
 \caption{Error de forma (distancia de Chamfer) global, en la IFP y en la IFD
-para la ED y el AG. La mayor diferencia aparece en la IFD.}
+para la ED y el AG. La ED domina en el error global y en la IFP, mientras que el
+AG ajusta ligeramente mejor la IFD.}
 \label{fig:errores}
 \end{figure}
 \FloatBarrier
@@ -312,11 +339,14 @@ La Tabla~\ref{tab:dimensiones} compara, eslabón por eslabón, las dimensiones d
 diseño CAD de referencia frente a las optimizadas por la ED y el AG. Las
 longitudes obtenidas por la ED son coherentes con los límites de la
 Tabla~\ref{tab:bounds} y dan lugar a un mecanismo compacto: la suma de los once
-eslabones estructurales ($B_1$, $B_2$, $L_1$--$L_8$ y $c_2$) es de 326.6~mm para
-la ED, 358.7~mm para el AG y aproximadamente 380.0~mm para el diseño CAD base.
-Es decir, la ED no sólo ajusta mejor las trayectorias, sino que además entrega
-el mecanismo más compacto de los tres, lo cual es deseable para su fabricación,
-su peso y su portabilidad sobre la mano del usuario.
+eslabones estructurales ($B_1$, $B_2$, $L_1$--$L_8$ y $c_2$) es de 347.2~mm para
+la ED, 457.1~mm para el AG y aproximadamente 380.0~mm para el diseño CAD base.
+Es decir, la ED no sólo obtiene un error global algo menor, sino que además
+entrega el mecanismo más compacto de los tres, mientras que el AG tiende a
+soluciones de mayor tamaño que el propio diseño de referencia. La compacidad es
+deseable para la fabricación, el peso y la portabilidad del dispositivo sobre la
+mano del usuario, por lo que constituye un criterio de diseño tan relevante como
+el propio error de ajuste.
 
 \begin{table}[htbp]
 \caption{Dimensiones de los eslabones (mm): diseño CAD base frente a las
@@ -327,21 +357,21 @@ soluciones óptimas de ED y AG}
 \toprule
 \textbf{Parámetro} & \textbf{CAD base} & \textbf{ED} & \textbf{AG} \\
 \midrule
-$B_1$  & 18.00 & 20.62 & 17.25 \\
-$B_2$  & 20.00 & 30.91 & 15.34 \\
-$L_1$  & 35.00 & 18.57 & 16.25 \\
-$L_2$  & 49.00 & 52.99 & 57.23 \\
-$L_3$  & 25.00 & 21.98 & 10.48 \\
-$L_4$  & 20.00 & 21.98 & 36.65 \\
-$L_5$  & 25.00 & 26.06 & 27.33 \\
-$L_6$  & 55.00 & 35.31 & 49.78 \\
-$L_7$  & 35.00 & 18.96 & 44.33 \\
-$L_8$  & 52.00 & 51.48 & 41.69 \\
-$c_2$  & 46.01 & 27.75 & 42.41 \\
-$h_{sp}$ & 17.00 & 25.13 & 17.68 \\
-$d_{sp}$ & 18.00 & \phantom{0}7.33 & \phantom{0}8.30 \\
+$B_1$  & 18.00 & 37.33 & 39.19 \\
+$B_2$  & 20.00 & 39.62 & 59.87 \\
+$L_1$  & 35.00 & 16.00 & 31.84 \\
+$L_2$  & 49.00 & 46.56 & 51.84 \\
+$L_3$  & 25.00 & 16.61 & 33.01 \\
+$L_4$  & 20.00 & 21.60 & 38.83 \\
+$L_5$  & 25.00 & 32.15 & 38.15 \\
+$L_6$  & 55.00 & 39.85 & 51.26 \\
+$L_7$  & 35.00 & 19.16 & 38.22 \\
+$L_8$  & 52.00 & 52.07 & 53.01 \\
+$c_2$  & 46.01 & 26.30 & 21.84 \\
+$h_{sp}$ & 17.00 & 14.91 & 15.63 \\
+$d_{sp}$ & 18.00 & \phantom{0}7.87 & \phantom{0}5.00 \\
 \midrule
-$\sum$ estructurales & 380.0 & \textbf{326.6} & 358.7 \\
+$\sum$ estructurales & 380.0 & \textbf{347.2} & 457.1 \\
 \bottomrule
 \end{tabular}
 \label{tab:dimensiones}
@@ -352,10 +382,13 @@ $\sum$ estructurales & 380.0 & \textbf{326.6} & 358.7 \\
 \subsection{Biofidelidad de las trayectorias}
 La Fig.~\ref{fig:biofid_ed} muestra la superposición de las trayectorias
 simuladas por la ED contra los 120 puntos MOCAP del agarre de pinza fina: tanto
-la curva de la IFP como la de la IFD siguen de cerca la forma fisiológica. En
-contraste, la Fig.~\ref{fig:biofid_ga} presenta el mismo resultado para el AG,
-donde la trayectoria de la IFD se desvía visiblemente de los datos, lo que
-explica su elevado error en esa articulación.
+la curva de la IFP como la de la IFD siguen de cerca la forma fisiológica. La
+Fig.~\ref{fig:biofid_ga} presenta el mismo resultado para el AG, cuyas
+trayectorias también acompañan a los datos; en particular, la curva de la IFD
+reproduce con fidelidad la flexión natural, en concordancia con el bajo error que
+el AG obtiene en esa articulación. Ambas soluciones, por tanto, exhiben una
+biofidelidad satisfactoria, con diferencias sutiles que se reparten entre las dos
+articulaciones según el algoritmo.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.92\columnwidth]{biofidelidad_simplificado_ED.png}}
@@ -366,29 +399,33 @@ IFD) superpuestas a los puntos MOCAP.}
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.92\columnwidth]{biofidelidad_simplificado_GA.png}}
-\caption{Biofidelidad de la solución del AG: la trayectoria de la IFD se aleja
-de los puntos MOCAP, en concordancia con su mayor error.}
+\caption{Biofidelidad de la solución del AG: las trayectorias de la IFP y la IFD
+acompañan a los puntos MOCAP; la IFD se ajusta con especial fidelidad.}
 \label{fig:biofid_ga}
 \end{figure}
 \FloatBarrier
 
 \subsection{Convergencia}
-La Fig.~\ref{fig:convergencia} presenta las curvas de convergencia. La ED
-desciende de forma sostenida hasta un mejor óptimo, mientras que el AG se estanca
-tempranamente y activa el paro por paciencia, una señal clara de convergencia
-prematura. Aunque el AG empleó menos evaluaciones de la función objetivo, ello
-no se traduce en una mejor solución, sino en una búsqueda que abandona el
-espacio antes de explotar regiones prometedoras.
+La Fig.~\ref{fig:convergencia} presenta las curvas de convergencia. Ambos
+algoritmos descienden de forma sostenida y aprovechan prácticamente todo el
+presupuesto de generaciones: la ED registra su última mejora cerca de la
+generación 257 y el AG cerca de la 268, de modo que ninguno se estanca de forma
+temprana. La ED alcanza un valor de la función objetivo algo menor, mientras que
+el AG converge a una solución muy próxima. Cabe notar que el AG llega a ese
+resultado con un número de evaluaciones de la función objetivo sensiblemente
+menor (Tabla~\ref{tab:resultados}), lo que refleja su distinto mecanismo de
+muestreo del espacio de búsqueda.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.92\columnwidth]{comparacion_convergencia.png}}
-\caption{Curvas de convergencia de la ED y el AG. La ED alcanza un mejor valor
-de la función objetivo; el AG se estanca y dispara el paro temprano.}
+\caption{Curvas de convergencia de la ED y el AG. Ambos métodos descienden de
+forma sostenida durante casi todas las generaciones; la ED alcanza un valor
+final algo menor y el AG converge a una solución muy cercana.}
 \label{fig:convergencia}
 \end{figure}
 \FloatBarrier
 
-\section{Discusión: por qué la ED supera al AG en este caso}
+\section{Discusión: por qué la ED conserva una ligera ventaja}
 El espacio de diseño de la síntesis dimensional es \emph{continuo} y altamente
 multimodal, con amplias regiones inviables (sin ensamble o con retroceso de la
 falange medial) que generan mesetas en la función objetivo. En este contexto, la
@@ -397,25 +434,29 @@ diferencias entre individuos de la propia población: cuando la población está
 dispersa, los pasos son grandes (exploración) y, conforme converge, se reducen
 automáticamente (explotación). Este escalado autoadaptativo encaja de forma
 natural con variables reales y con la geometría del dominio
-\cite{ref_de_survey,ref_ga_pso_de}.
+\cite{ref_de_survey,ref_ga_pso_de} y explica, en buena parte, que la ED alcance
+un error global algo menor y, sobre todo, el mecanismo más compacto.
 
-El AG real codificado, en cambio, depende de la cruza SBX y la mutación
-polinomial con parámetros de distribución fijos ($\eta_c$, $\eta_m$). Aunque son
-operadores apropiados para variables continuas, su capacidad de autoescalado es
-menor y resultan más sensibles al ajuste y a la pérdida de diversidad. En la
-corrida realizada, el AG mostró convergencia prematura y activó el paro por
-estancamiento, quedando atrapado en una solución de mayor error (7.17~mm en la
-IFD), un comportamiento consistente con comparaciones previas en las que la ED
-domina a los AG en problemas continuos \cite{ref_de_vs_ga,ref_ga_pso_de}.
+El AG real codificado se apoya en la cruza SBX y la mutación polinomial. Una vez
+que sus índices de distribución ($\eta_c$, $\eta_m$) y sus probabilidades se
+sintonizan con Optuna ---en lugar de fijarse a mano--- el AG resulta plenamente
+competitivo: alcanza un error global muy cercano al de la ED e incluso la supera
+en la articulación más distal (IFD). Este resultado matiza la idea, frecuente en
+la literatura, de que la ED domina sistemáticamente a los AG en problemas
+continuos \cite{ref_de_vs_ga,ref_ga_pso_de}: la brecha observada se reduce de
+manera notable cuando ambos algoritmos parten de una sintonización equitativa.
+La contrapartida del AG en este caso es que tiende a soluciones de mayor tamaño,
+lo que penaliza la compacidad del mecanismo.
 
 Conviene señalar una limitación metodológica relativa al costo de cómputo. La ED
 se evaluó con una implementación vectorizada y paralela, mientras que el AG se
 ejecutó en Python puro; por ello, la comparación de tiempos de ejecución está
 sesgada y no se reporta como criterio de mérito. Se enfatiza, en cambio, la
 \emph{calidad de la solución} y el número de evaluaciones de la función (nfev)
-como métrica de cómputo más justa. Aun así, la ED alcanzó un menor error pese a
-realizar más evaluaciones, lo que indica que su ventaja proviene de una búsqueda
-más efectiva y no simplemente de un mayor presupuesto.
+como métrica de cómputo más justa. La ED alcanzó un error global ligeramente
+menor pese a realizar más evaluaciones, mientras que el AG obtuvo una solución
+muy próxima con un presupuesto de evaluaciones bastante menor, lo que sugiere
+que cada método explora el espacio de búsqueda con una eficiencia distinta.
 
 \section{Limitaciones y trabajo futuro}
 El estudio se limita al modelo simplificado (hasta la falange medial) y a una
@@ -432,13 +473,18 @@ mecanismo óptimo mediante prototipado y medición de las trayectorias reales.
 Se comparó la Evolución Diferencial y un Algoritmo Genético real codificado en
 la síntesis dimensional parcial (hasta la falange medial) de un mecanismo de
 exoesqueleto de dedo, bajo un planteamiento, una función objetivo y un
-presupuesto idénticos. La ED obtuvo un error global de 2.15~mm frente a 5.55~mm
-del AG y, de manera notable, entregó el mecanismo más compacto (326.6~mm de suma
-de eslabones estructurales). El análisis sugiere que, para esta clase de
-problemas continuos y multimodales, la mutación diferencial autoescalada de la
-ED ofrece una ventaja estructural sobre los operadores de distribución fija del
-AG, que aquí mostró convergencia prematura. La ED se recomienda, por tanto, como
-método de referencia para la síntesis dimensional de este mecanismo.
+presupuesto idénticos, y con los hiperparámetros de ambos métodos sintonizados de
+forma simétrica con Optuna (muestreador TPE, 25 ensayos por algoritmo). La ED
+obtuvo un error global de 2.17~mm frente a 2.55~mm del AG y, de manera notable,
+entregó el mecanismo más compacto (347.2~mm de suma de eslabones estructurales,
+frente a 457.1~mm del AG). Una vez sintonizado, el AG resultó competitivo e
+incluso ajustó mejor la articulación más distal (IFD). El análisis sugiere que,
+para esta clase de problemas continuos y multimodales, la mutación diferencial
+autoescalada de la ED ofrece una ligera ventaja en error global y, sobre todo,
+en compacidad, mientras que un AG bien sintonizado alcanza una calidad de ajuste
+comparable. La ED se recomienda como método de referencia cuando la compacidad
+del mecanismo es prioritaria, sin que ello descarte al AG como alternativa
+válida para esta clase de síntesis dimensional.
 
 \section*{Agradecimientos}
 Los autores agradecen a Pavel Palma Nicolás por el diseño del mecanismo y el
