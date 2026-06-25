@@ -108,8 +108,8 @@ también la coherencia y la compacidad del mecanismo resultante, dos aspectos
 determinantes para su posterior fabricación.
 
 \section{Modelo cinemático del exoesqueleto}
-El modelo cinemático y el diseño del mecanismo del exoesqueleto fueron
-desarrollados por Pavel Palma Nicolás. Sobre ese diseño original se añadió en
+El modelo cinemático y el diseño del mecanismo del exoesqueleto provienen de un
+trabajo previo. Sobre ese diseño original se añadió en
 este trabajo una tercera etapa de cuatro barras, con el fin de corregir
 problemas de seguimiento que presentaba el modelo original. El presente estudio
 se centra en la optimización dimensional del mecanismo resultante.
@@ -245,7 +245,10 @@ la misma semilla (42) en ambos casos, de modo que la sintonización es reproduci
 y equitativa. La Tabla~\ref{tab:config} resume los hiperparámetros resultantes.
 
 \subsection{Evolución Diferencial}
-Se empleó la implementación \texttt{differential\_evolution} de SciPy con la
+La Evolución Diferencial es una metaheurística poblacional para optimización en
+espacios continuos, cuyas variantes y aplicaciones han sido objeto de revisiones
+extensas \cite{ref_de_recent,ref_de_image}. En este trabajo se empleó la
+implementación \texttt{differential\_evolution} de SciPy con la
 estrategia \texttt{best1bin}. Los hiperparámetros sintonizados por Optuna fueron
 un tamaño de población relativo $\text{popsize}=28$, un factor de mutación
 diferencial que varía de forma aleatoria en cada generación dentro del rango
@@ -491,11 +494,6 @@ ligera ventaja en error global y, sobre todo, en compacidad, mientras que un AG
 bien sintonizado alcanza una calidad de ajuste comparable. La ED se recomienda como método de referencia cuando la compacidad
 del mecanismo es prioritaria, sin que ello descarte al AG como alternativa
 válida para esta clase de síntesis dimensional.
-
-\section*{Agradecimientos}
-Los autores agradecen a Pavel Palma Nicolás por el diseño del mecanismo y el
-desarrollo del modelo cinemático del exoesqueleto que sirvieron de base para
-este estudio de optimización.
 
 \input{references}
 \end{document}
