@@ -35,30 +35,36 @@ eora010314@gs.utm.mx}
 \maketitle
 
 \begin{abstract}
-La síntesis dimensional de mecanismos para exoesqueletos de mano es un problema
-de optimización no lineal, multimodal y fuertemente restringido: las longitudes
-de los eslabones deben elegirse de modo que el extremo del mecanismo reproduzca
-las trayectorias articulares fisiológicas del dedo a lo largo de todo el rango
-de flexión. Este trabajo compara dos metaheurísticas poblacionales de uso
-extendido ---Evolución Diferencial (ED) y Algoritmo Genético (AG)--- sobre la
-síntesis cinemática \emph{parcial} de un mecanismo de exoesqueleto de dedo, es
-decir, ajustando el movimiento hasta la falange medial (articulación
-interfalángica distal, IFD). El problema se formula con 16 parámetros de diseño
-y una función objetivo basada en la distancia de Chamfer ponderada respecto a
-120 puntos de captura de movimiento (MOCAP) de un agarre de pinza fina, a la que
-se añaden una penalización de monotonicidad y una regularización suave de las
-dimensiones. Bajo un planteamiento idéntico, la misma semilla y el mismo
-presupuesto de generaciones, la ED alcanzó un error global de 2.15~mm frente a
-5.55~mm del AG y, de manera notable, produjo un mecanismo más compacto (suma de
+La síntesis dimensional de mecanismos para exoesqueletos de mano consiste en
+elegir las longitudes de los eslabones para que el extremo del mecanismo
+reproduzca las trayectorias articulares naturales del dedo en todo el rango de
+flexión. Es un problema de optimización difícil por tres motivos: la relación
+entre las longitudes y la curva que describe el mecanismo no es lineal, existen
+muchas combinaciones de longitudes que dan errores parecidos (es decir, hay
+múltiples óptimos locales) y buena parte de las soluciones ni siquiera son
+válidas porque el mecanismo no llega a ensamblar. Este trabajo compara dos
+metaheurísticas poblacionales muy utilizadas ---Evolución Diferencial (ED) y
+Algoritmo Genético (AG)--- en la síntesis dimensional \emph{parcial} de un
+mecanismo de exoesqueleto de dedo, es decir, ajustando el movimiento hasta la
+falange medial (articulación interfalángica distal, IFD). El problema se formula
+con 16 parámetros de diseño y una función objetivo basada en la distancia de
+Chamfer ponderada respecto a 120 puntos de captura de movimiento (MOCAP) de un
+agarre de pinza fina ---la oposición entre el pulgar y el índice--- tomados de
+una base de datos de cinemática de la mano \cite{ref_dataset,ref_pizzolato}, a
+la que se añaden una penalización por retrocesos del movimiento y un término que
+favorece dimensiones pequeñas. Bajo un planteamiento idéntico, la misma semilla
+y el mismo número de generaciones, la ED alcanzó un error global de 2.15~mm
+frente a 5.55~mm del AG y, además, produjo un mecanismo más compacto (suma de
 eslabones estructurales de 326.6~mm contra 358.7~mm). Se analiza por qué la ED
-domina en este espacio continuo: su mutación diferencial autoescalada explora y
-explota mejor el dominio, mientras que el AG mostró convergencia prematura. Los
+domina en este espacio continuo: su mutación diferencial ajusta el tamaño de sus
+pasos de forma automática, lo que le permite recorrer el espacio de búsqueda y
+afinar la solución mejor que el AG, que mostró convergencia prematura. Los
 resultados respaldan el uso de la ED para esta clase de síntesis dimensional.
 \end{abstract}
 
 \begin{IEEEkeywords}
-evolución diferencial, algoritmo genético, síntesis cinemática, exoesqueleto de
-mano, optimización dimensional, mecanismo de cuatro barras.
+evolución diferencial, algoritmo genético, síntesis dimensional, exoesqueleto de
+mano, optimización dimensional, cadena de mecanismos.
 \end{IEEEkeywords}
 
 \input{Introduction}
@@ -179,7 +185,8 @@ $\theta_{\text{off}}$ (rad) & $-\pi$ & $\pi$ \\
 
 \subsection{Función objetivo}
 El ajuste se mide con la distancia de Chamfer simétrica entre la nube de puntos
-de captura de movimiento $M$ y la trayectoria simulada $S$. Antes de evaluar el
+de captura de movimiento $M$ \cite{ref_dataset,ref_pizzolato} y la trayectoria
+simulada $S$. Antes de evaluar el
 error, la trayectoria simulada se alinea de forma rígida (rotación $R$ y
 traslación $\mathbf{t}$) con los datos mediante una solución de Procrustes, de
 modo que el error refleje la \emph{forma} de la curva y no su colocación

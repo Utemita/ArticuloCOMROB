@@ -1,40 +1,43 @@
 \section{Introducción}
 Los exoesqueletos de mano son dispositivos robóticos de asistencia y
-rehabilitación cuya función es acompañar o restituir el movimiento de los dedos.
-Para que la asistencia resulte cómoda y segura, el mecanismo debe reproducir con
-fidelidad las trayectorias articulares naturales del dedo a lo largo de todo el
-rango de flexión; de lo contrario, aparecen fuerzas de reacción indeseadas en
-las articulaciones y el dispositivo deja de ser cómodo para el usuario. Lograr
-ese seguimiento depende en gran medida de elegir correctamente las longitudes de
-los eslabones del mecanismo, un problema que se conoce como \emph{síntesis
-dimensional}.
+rehabilitación cuya función es acompañar o ayudar a recuperar el movimiento de
+los dedos \cite{ref_exo_review}. Para que la asistencia resulte cómoda y segura,
+el mecanismo debe reproducir con fidelidad las trayectorias articulares naturales
+del dedo a lo largo de todo el rango de flexión; de lo contrario, aparecen
+fuerzas de reacción indeseadas en las articulaciones y el dispositivo deja de ser
+cómodo para el usuario \cite{ref_fourbar_nat}. Lograr ese seguimiento depende en
+gran medida de elegir correctamente las longitudes de los eslabones del
+mecanismo, un problema que se conoce como \emph{síntesis dimensional}
+\cite{ref_de_fourbar}.
 
-La síntesis dimensional de mecanismos para generación de trayectoria es un
-problema de optimización no lineal, multimodal y fuertemente restringido: el
-espacio de soluciones contiene amplias regiones en las que el mecanismo
-simplemente no ensambla o invierte su movimiento, y la relación entre las
-longitudes y la curva resultante es altamente no convexa. Estas características
-dificultan el uso de métodos clásicos basados en gradiente y motivan el empleo
-de metaheurísticas poblacionales como la Evolución Diferencial (ED) y los
-Algoritmos Genéticos (AG), capaces de explorar el espacio sin depender de
-información de derivadas.
+La síntesis dimensional para generación de trayectoria es un problema de
+optimización difícil: el espacio de soluciones contiene amplias regiones en las
+que el mecanismo simplemente no ensambla o invierte su movimiento, y la relación
+entre las longitudes de los eslabones y la curva que describe el mecanismo es no
+lineal y presenta muchos óptimos locales. Por ello, los métodos clásicos basados
+en gradiente suelen quedar atrapados en soluciones subóptimas, lo que motiva el
+empleo de metaheurísticas poblacionales como la Evolución Diferencial (ED) y los
+Algoritmos Genéticos (AG), capaces de recorrer el espacio de búsqueda sin
+necesitar información de derivadas \cite{ref_de_fourbar,ref_tlbo}.
 
 Aunque ambas familias de algoritmos se usan ampliamente, su desempeño relativo
-depende de la naturaleza del problema, de la codificación de las variables y del
-ajuste de los hiperparámetros. La elección entre una u otra rara vez es obvia y
-suele requerir evidencia empírica sobre la instancia concreta. En este trabajo
-abordamos esa pregunta para un mecanismo de exoesqueleto de dedo real, mediante
-una comparación controlada en la que ambos algoritmos comparten exactamente el
-mismo planteamiento, la misma función objetivo y el mismo presupuesto de
-generaciones.
+depende de la naturaleza del problema, de cómo se representan las variables y del
+ajuste de los hiperparámetros \cite{ref_ga_pso_de,ref_de_vs_ga}. La elección
+entre uno u otro rara vez es evidente y casi siempre requiere ponerlos a prueba
+sobre el caso concreto que se quiere resolver. En este trabajo abordamos esa
+pregunta para un mecanismo de exoesqueleto de dedo real: comparamos ambos
+algoritmos en igualdad de condiciones, es decir, partiendo del mismo
+planteamiento, la misma función objetivo y el mismo número de generaciones, de
+modo que cualquier diferencia en el resultado se deba al algoritmo y no a cómo se
+montó el experimento.
 
-Para que la comparación sea robusta y reproducible, se optimiza una versión
-\emph{parcial} del mecanismo, que reproduce el movimiento hasta la falange
-medial (articulación IFD). Esta instancia es más pequeña que el modelo completo
-de tres falanges, pero conserva las dificultades esenciales del problema
----acoplamiento de etapas, restricciones de ensamble y monotonicidad del
-movimiento---, lo que la hace idónea para aislar el efecto del algoritmo de
-optimización.
+Para que la comparación sea reproducible, se optimiza una versión \emph{parcial}
+del mecanismo, que reproduce el movimiento hasta la falange medial (articulación
+IFD). Este caso es más pequeño que el modelo completo de tres falanges, pero
+conserva las dificultades esenciales del problema ---el acoplamiento entre
+etapas, las restricciones de ensamble y la necesidad de que el movimiento no
+retroceda---, lo que permite estudiar el efecto del algoritmo de optimización sin
+la complejidad añadida del modelo completo.
 
 \subsection{Contribuciones}
 Las contribuciones de este artículo son: (i) una formulación unificada del
