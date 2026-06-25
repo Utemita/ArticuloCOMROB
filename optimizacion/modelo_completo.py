@@ -1,28 +1,26 @@
 """
 modelo_completo.py
 ==================
-Modelo cinematico COMPLETO del exoesqueleto de rehabilitacion de dedo: las TRES
-falanges (proximal, medial y distal) y los CINCO mecanismos que lo componen:
+Modelo cinematico COMPLETO del exo de rehabilitacion de dedo: las TRES falanges
+(proximal, medial y distal) y los CINCO mecanismos que lo mueven:
 
   ETAPA 1 (5 barras + 4 barras) -> falange proximal (articulacion MCP)
   ETAPA 2 (5 barras + 4 barras) -> falange medial   (articulacion IFP)
   ETAPA 3 (4 barras)            -> falange distal    (articulacion IFD/DIP)
 
-Es la regeneracion del optimizador original (`exo_18_pinza_fina.py`) integrando
-las MEJORAS validadas en el modelo simplificado:
+Basicamente es la regeneracion del optimizador original (exo_18_pinza_fina.py)
+pero con las mejoras que ya validamos en el modelo simplificado:
   * Dimensiones acotadas (eslabones <= 60 mm; tercer mecanismo <= 45 mm).
-  * Angulo auxiliar medial-c2 (`theta_aux_fm`) limitado a 70 deg.
-  * Regularizacion suave que favorece dimensiones y angulo auxiliar pequenos
-    sin degradar el ajuste.
-  * Funcion `validar_cinematica()` que verifica la viabilidad del mecanismo en
-    TODO el barrido de la manivela.
+  * Angulo auxiliar medial-c2 (theta_aux_fm) limitado a 70 deg.
+  * Regularizacion suave que empuja a dimensiones y angulo aux chicos sin
+    echar a perder el ajuste.
+  * validar_cinematica() que verifica viabilidad en TODO el barrido.
 
-El enfoque de optimizacion asociado es EVOLUCION DIFERENCIAL
-(`optimizar_completo_ED.py`), por ser el ganador del estudio comparativo
-realizado sobre el modelo simplificado.
+El optimizador asociado es Evolucion Diferencial (optimizar_completo_ED.py),
+que fue el ganador de la comparacion sobre el modelo simplificado.
 
 Vector de diseno: 21 parametros (17 del mecanismo base + 4 del tercer 4 barras).
-Todas las longitudes en metros y los angulos en radianes.
+Longitudes en metros, angulos en radianes.
 """
 import os
 import numpy as np
@@ -33,7 +31,7 @@ from comun import (FP_REAL, FM_REAL, FD_REAL, sol_5_barras, solve_four_bar,
                    optimal_rigid_transform, apply_transform,
                    monotonicity_penalty)
 
-# Tope fisiologico de la flexion distal relativa (DIP) en grados.
+# Tope fisiologico de la flexion distal relativa (DIP) en grados
 DIP_MAX_DEG = float(os.environ.get('DIP_MAX_DEG', '35.0'))
 
 # --- Datos MOCAP completos (IFP, IFD y punta) ---
@@ -59,7 +57,7 @@ NOMBRES = [
 ]
 
 # ==============================================================================
-# --- LIMITES (BOUNDS) con DIMENSIONES y ANGULO AUXILIAR REDUCIDOS ---
+# --- LIMITES (BOUNDS) con dimensiones y angulo auxiliar reducidos ---
 # ==============================================================================
 bounds = [
     (0.015, 0.060), (0.015, 0.060),                  # Bancada1, Bancada2
@@ -85,7 +83,7 @@ W_IFD = 0.375
 W_TIP = 0.375
 W_MONO = 5.0
 W_DIP = float(os.environ.get('W_DIP', '0.3'))
-# Regularizacion suave (misma filosofia que el modelo simplificado)
+# Regularizacion suave (misma idea que en el simplificado)
 W_REG_DIM = float(os.environ.get('W_REG_DIM', '5e-4'))
 W_REG_AUX = float(os.environ.get('W_REG_AUX', '5e-4'))
 
@@ -94,11 +92,15 @@ W_REG_AUX = float(os.environ.get('W_REG_AUX', '5e-4'))
 # --- MODELO CINEMATICO COMPLETO (3 falanges, 5 mecanismos) ---
 # ==============================================================================
 def run_kinematics(p, th_input):
+    """Cinematica directa del exo completo (3 falanges).
+    Si no jala en algun punto, regresa None.
+    """
     (Bancada1, Bancada2, Link1, Link2, Link3, Link4, Link5,
      Link6, Link7, Link8, Link10, hsp, dsp,
      theta_aux_fm, theta_aux_fd, gear_ratio, theta_offset,
      Link9_3, Link10_3, back3_3, up3_3) = p
 
+    # Validaciones basicas pa que no truene
     if gear_ratio <= 0:
         return None
     if min(p[:11]) <= 0.005:
@@ -127,11 +129,13 @@ def run_kinematics(p, th_input):
     for th2 in th_input:
         th1 = (th2 / gear_ratio) + theta_offset
 
+        # --- Etapa 1: 5 barras ---
         res5 = sol_5_barras(Link4, Link3, r3_val, Link1, Link2, th1, th2)
         if res5 is None:
             return None
         pxP, pyP = res5
 
+        # --- Etapa 1: 4 barras ---
         theta4 = solve_four_bar(Link4, Link5, c1, Bancada2, th1, theta14B)
         if theta4 is None:
             return None
@@ -150,6 +154,7 @@ def run_kinematics(p, th_input):
         pxm4 = Link4 * np.cos(th2) - r3_val
         pym4 = Link4 * np.sin(th2)
 
+        # --- Etapa 2: 5 barras (referencia secundaria) ---
         theta_roll = np.arctan2(pym4 - pys1, pxm4 - pxs1)
         theta1m2 = np.arctan2(pys2 - pys1, pxs2 - pxs1) - theta_roll
         theta2m2 = np.arctan2(pyP - pym4, pxP - pxm4) - theta_roll
@@ -167,6 +172,7 @@ def run_kinematics(p, th_input):
         pxP2 = mag * np.cos(theta_loc + theta_roll) + px_aux
         pyP2 = mag * np.sin(theta_loc + theta_roll) + py_aux
 
+        # --- Etapa 2: 4 barras ---
         theta1m42 = np.arctan2(pys2 - py_ifp, pxs2 - px_ifp)
         theta2m42 = np.arctan2(pyP2 - pys2, pxP2 - pxs2)
 
@@ -176,6 +182,7 @@ def run_kinematics(p, th_input):
 
         theta_fm = theta4m2 + theta_aux_fm
 
+        # Anti-gancho: que no se regrese la medial
         if prev_theta_fm is not None:
             delta_fm = (theta_fm - prev_theta_fm + np.pi) % (2 * np.pi) - np.pi
             if delta_fm < -np.deg2rad(0.5):
@@ -191,18 +198,21 @@ def run_kinematics(p, th_input):
         IFP_pt = np.array([px_ifp, py_ifp])
         IFD_pt = np.array([px_ifd, py_ifd])
 
+        # Determinamos el lado dorsal en la primera iteracion
         if dorsal_sign3 is None:
             P3_pt = IFP_pt + Link10 * np.array([np.cos(theta4m2), np.sin(theta4m2)])
             dorsal_sign3 = 1.0 if np.dot(P3_pt - IFP_pt, prox_norm) >= 0 else -1.0
         dorsal_norm = dorsal_sign3 * prox_norm
 
+        # Punto de anclaje del acoplador
         Pa = IFP_pt - back3_3 * prox_dir + up3_3 * dorsal_norm
         sols = circle_intersections(Pa, Link9_3, IFD_pt, Link10_3)
         if sols is None:
-            return None
+            return None  # no intersectan, mecanismo invalido
         D3 = sols[1]
         ang_rocker = np.arctan2(D3[1] - py_ifd, D3[0] - px_ifd)
 
+        # Enganche del angulo distal
         if gamma_bracket3 is None:
             gamma_bracket3 = (theta_fm + theta_aux_fd) - ang_rocker
         theta_fd = ang_rocker + gamma_bracket3
@@ -210,6 +220,7 @@ def run_kinematics(p, th_input):
         px_tip = FD_REAL * np.cos(theta_fd) + px_ifd
         py_tip = FD_REAL * np.sin(theta_fd) + py_ifd
 
+        # Checamos que no se vaya a valores locos
         if (np.abs(px_tip) > 0.3 or np.abs(py_tip) > 0.3
                 or not np.isfinite(px_tip) or not np.isfinite(py_tip)):
             return None
@@ -219,7 +230,7 @@ def run_kinematics(p, th_input):
         PXtip.append(px_tip); PYtip.append(py_tip)
         TH_FM.append(theta_fm); TH_FD.append(theta_fd)
 
-    # Restriccion fisiologica de la flexion distal (DIP <= DIP_MAX_DEG)
+    # Restriccion fisiologica: la flexion DIP no debe exceder DIP_MAX_DEG
     dip_rel = np.unwrap(np.asarray(TH_FD)) - np.unwrap(np.asarray(TH_FM))
     if np.ptp(dip_rel) > np.deg2rad(DIP_MAX_DEG):
         return None
@@ -237,6 +248,7 @@ def run_kinematics(p, th_input):
 # --- FUNCION OBJETIVO ---
 # ==============================================================================
 def fitness_function(p):
+    """Funcion objetivo del modelo completo. Penaliza con 1000 si no ensambla."""
     sim = run_kinematics(p, theta_input)
     if sim is None:
         return 1000.0
@@ -253,6 +265,7 @@ def fitness_function(p):
     mono_ifd = monotonicity_penalty(aligned['ifd'])
     mono_tip = monotonicity_penalty(aligned['tip'])
 
+    # Error de perfil DIP (que siga el patron del mocap)
     exo_dip = np.unwrap(sim['theta_fd']) - np.unwrap(sim['theta_fm'])
     exo_dip_rel = exo_dip - exo_dip[0]
     dip_error = FD_REAL * np.mean(np.abs(exo_dip_rel - dip_rel_mocap))
@@ -261,6 +274,7 @@ def fitness_function(p):
     mono_error = W_MONO * (mono_ifd + mono_tip)
     dip_pen = W_DIP * dip_error
 
+    # Regularizacion suave
     suma_links = float(np.sum(p[:11]))
     reg_dim = W_REG_DIM * suma_links
     reg_aux = W_REG_AUX * (p[13] / np.pi)
@@ -269,9 +283,10 @@ def fitness_function(p):
 
 
 # ==============================================================================
-# --- EVALUACION / METRICAS EN mm ---
+# --- EVALUACION / METRICAS EN mm (pa reportes) ---
 # ==============================================================================
 def evaluar(p):
+    """Calcula errores en mm y datos alineados. Si no jala, regresa None."""
     sim = run_kinematics(p, theta_input)
     if sim is None:
         return None
@@ -298,9 +313,13 @@ def evaluar(p):
 
 
 # ==============================================================================
-# --- VALIDACION CINEMATICA (viabilidad en TODO el movimiento) ---
+# --- VALIDACION CINEMATICA (checa viabilidad en todo el movimiento) ---
 # ==============================================================================
 def validar_cinematica(p, verbose=False):
+    """Checa que el mecanismo sea viable en todo el recorrido: que ensamble,
+    sin NaN/Inf, sin retroceso de la medial y con DIP dentro del rango.
+    Regresa (ok, info).
+    """
     info = {}
     sim = run_kinematics(p, theta_input)
     if sim is None:

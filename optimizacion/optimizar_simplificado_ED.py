@@ -1,15 +1,14 @@
 """
 optimizar_simplificado_ED.py
 ============================
-Optimizacion del modelo SIMPLIFICADO (hasta la falange medial, 16 parametros)
-mediante EVOLUCION DIFERENCIAL (scipy.optimize.differential_evolution).
+Aqui corremos la optimizacion del modelo SIMPLIFICADO (hasta la falange medial,
+16 parametros) con EVOLUCION DIFERENCIAL (scipy.optimize.differential_evolution).
 
-Es uno de los dos contendientes del articulo COMROB. Comparte EXACTAMENTE la
-misma funcion objetivo y los mismos limites que la version de Algoritmos
-Geneticos (`optimizar_simplificado_GA.py`), de modo que la comparacion mide el
-algoritmo y no el planteamiento del problema.
+Este es uno de los dos contendientes del articulo COMROB. Usa la MISMA funcion
+objetivo y los MISMOS limites que la version de GA (optimizar_simplificado_GA.py),
+asi que la comparacion mide el algoritmo, no el problema.
 
-Genera:
+Lo que genera:
   - resultados/parametros_simplificado_ED.txt
   - resultados/trayectorias_simplificado_ED.csv
   - resultados/biofidelidad_simplificado_ED.png
@@ -59,19 +58,19 @@ def main():
         callback=cb,
     )
     dt = time.time() - t0
-    print(f'\n>> ED finalizada en {dt:.1f}s  (fitness={res.fun:.6f}, '
+    print(f'\n>> ED listo en {dt:.1f}s  (fitness={res.fun:.6f}, '
           f'nfev={res.nfev})')
 
     _reportar(res.x, dt, res.fun, historial, res.nfev)
 
 
 def _reportar(p_opt, dt, fitness, historial, nfev):
-    # --- Validacion cinematica de viabilidad ---
+    # --- Checamos viabilidad cinematica ---
     ok, info = M.validar_cinematica(p_opt, verbose=True)
 
     metr = M.evaluar(p_opt)
     if metr is None:
-        print('>> ADVERTENCIA: el resultado no produce cinematica valida.')
+        print('>> OJO: el resultado no produce cinematica valida.')
         return
 
     print('\n>> RESULTADOS (Evolucion Diferencial)')
@@ -127,8 +126,7 @@ def _reportar(p_opt, dt, fitness, historial, nfev):
     plt.savefig(os.path.join(OUTDIR, 'biofidelidad_simplificado_ED.png'), dpi=150)
     plt.close()
 
-    print(f'\n>> Archivos guardados en {OUTDIR}/ '
-          '(parametros, trayectorias, convergencia, biofidelidad).')
+    print(f'\n>> Todo guardado en {OUTDIR}/')
 
 
 if __name__ == '__main__':

@@ -2,14 +2,14 @@
 optimizar_simplificado_GA.py
 ============================
 Optimizacion del modelo SIMPLIFICADO (hasta la falange medial, 16 parametros)
-mediante un ALGORITMO GENETICO de codificacion real (definido en `comun.py`:
-seleccion por torneo + cruce SBX + mutacion polinomial + elitismo).
+con un ALGORITMO GENETICO de codificacion real (el que esta en comun.py:
+torneo + cruce SBX + mutacion polinomial + elitismo).
 
-Es el segundo contendiente del articulo COMROB. Usa EXACTAMENTE la misma
-funcion objetivo y los mismos limites que la version de Evolucion Diferencial
-(`optimizar_simplificado_ED.py`).
+Este es el segundo contendiente del articulo. Usa la MISMA funcion objetivo y
+los MISMOS limites que la version de ED (optimizar_simplificado_ED.py), asi
+que la comparacion es justa.
 
-Genera:
+Lo que genera:
   - resultados/parametros_simplificado_GA.txt
   - resultados/trayectorias_simplificado_GA.csv
   - resultados/biofidelidad_simplificado_GA.png
@@ -51,7 +51,7 @@ def main():
         tournsize=3, n_elite=2, seed=SEED, disp=True, paciencia=100,
     )
     dt = time.time() - t0
-    print(f'\n>> GA finalizado en {dt:.1f}s  (fitness={res.fun:.6f}, '
+    print(f'\n>> GA listo en {dt:.1f}s  (fitness={res.fun:.6f}, '
           f'generaciones={res.nit}, nfev={res.nfev})')
 
     _reportar(res.x, dt, res.fun, res.historial, res.nfev)
@@ -62,7 +62,7 @@ def _reportar(p_opt, dt, fitness, historial, nfev):
 
     metr = M.evaluar(p_opt)
     if metr is None:
-        print('>> ADVERTENCIA: el resultado no produce cinematica valida.')
+        print('>> OJO: el resultado no produce cinematica valida.')
         return
 
     print('\n>> RESULTADOS (Algoritmo Genetico)')
@@ -114,8 +114,7 @@ def _reportar(p_opt, dt, fitness, historial, nfev):
     plt.savefig(os.path.join(OUTDIR, 'biofidelidad_simplificado_GA.png'), dpi=150)
     plt.close()
 
-    print(f'\n>> Archivos guardados en {OUTDIR}/ '
-          '(parametros, trayectorias, convergencia, biofidelidad).')
+    print(f'\n>> Todo guardado en {OUTDIR}/')
 
 
 if __name__ == '__main__':

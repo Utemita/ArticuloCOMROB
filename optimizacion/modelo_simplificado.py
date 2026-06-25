@@ -1,34 +1,30 @@
 """
 modelo_simplificado.py
 ======================
-Modelo cinematico SIMPLIFICADO del exoesqueleto, recortado HASTA la trayectoria
-de la FALANGE MEDIAL (articulacion IFD inclusive). Sirve para VALIDAR el
-funcionamiento de los algoritmos de optimizacion (Evolucion Diferencial vs
-Algoritmos Geneticos) sobre un problema mas pequeno y manejable.
+Modelo cinematico SIMPLIFICADO del exo -- solo llega hasta la trayectoria de la
+FALANGE MEDIAL (articulacion IFD inclusive). Esto es pa validar que los
+algoritmos de optimizacion (ED vs GA) funcionan bien sobre un problema mas
+chiquito antes de meterle las 3 falanges completas.
 
-Que se simplifico respecto al modelo completo (`exo_18_pinza_fina.py`)
---------------------------------------------------------------------
-  * Se ELIMINA la falange distal y TODO el tercer mecanismo de 4 barras que la
-    mueve (eslabones Link9_3, Link10_3 y el soporte dorsal back3_3/up3_3).
-  * Se elimina el offset distal `theta_aux_fd` (ya no hay punta que ubicar).
-  * Los objetivos quedan reducidos a dos trayectorias: IFP (codo de la falange
-    proximal) e IFD (extremo de la falange medial).
+Que le quitamos respecto al modelo completo (exo_18_pinza_fina.py):
+  * Se elimina la falange distal y TODO el tercer mecanismo de 4 barras
+    (Link9_3, Link10_3 y el soporte dorsal back3_3/up3_3).
+  * Se quita el offset distal theta_aux_fd (ya no hay punta que ubicar).
+  * Los objetivos quedan en dos trayectorias: IFP e IFD.
   * El vector de diseno pasa de 21 a 16 parametros.
 
-Mejoras pedidas para el articulo
---------------------------------
-  * DIMENSIONES REDUCIDAS: se acotan los limites de los eslabones (de 80 mm a
-    60 mm como maximo) para obtener un mecanismo mas compacto y fabricable.
-  * ANGULO AUXILIAR MEDIAL-c2 REDUCIDO: el limite superior de `theta_aux_fm`
-    (angulo entre la falange medial y el eslabon c2/Link10) se baja de 180 deg
-    a 70 deg, y una regularizacion MUY suave favorece valores pequenos SIN
-    degradar el ajuste (el termino de forma sigue dominando la funcion objetivo).
-  * VALIDACION CINEMATICA: `validar_cinematica()` comprueba que los parametros
-    son viables y que el mecanismo ensambla, sin NaN ni retrocesos, a lo largo
-    de TODO el barrido de la manivela.
+Mejoras que le metimos pa el articulo:
+  * DIMENSIONES REDUCIDAS: eslabones acotados a max 60 mm (antes era 80 mm)
+    pa que el mecanismo sea mas compacto y fabricable.
+  * ANGULO AUXILIAR MEDIAL-c2 REDUCIDO: theta_aux_fm ahora tiene limite
+    superior de 70 deg (antes 180 deg), con una regularizacion suave que
+    favorece valores chicos SIN echar a perder el ajuste de forma.
+  * VALIDACION CINEMATICA: validar_cinematica() checa que los parametros son
+    viables y que el mecanismo ensambla sin NaN ni retrocesos en todo el
+    barrido de la manivela.
 
-Los limites (`bounds`) y la funcion `fitness_function` son IDENTICOS para los
-dos optimizadores (ED y GA), de modo que la comparacion sea justa.
+Ojo: los bounds y la fitness_function son IDENTICOS pa ED y GA, asi la
+comparacion mide el algoritmo y no el planteamiento.
 """
 import os
 import numpy as np
@@ -38,7 +34,7 @@ from comun import (FP_REAL, FM_REAL, sol_5_barras, solve_four_bar,
                    chamfer_distance, optimal_rigid_transform, apply_transform,
                    monotonicity_penalty)
 
-# --- Datos MOCAP (solo se usan IFP e IFD en la version simplificada) ---
+# --- Datos MOCAP (solo usamos IFP e IFD en esta version) ---
 _MOCAP = comun.cargar_mocap(os.path.join(os.path.dirname(__file__),
                                          "mocap_pinza_fina_120pts.csv"))
 mocap_pts = {'ifp': _MOCAP['ifp'], 'ifd': _MOCAP['ifd']}
@@ -57,8 +53,8 @@ NOMBRES = [
 ]
 
 # ==============================================================================
-# --- LIMITES (BOUNDS) con DIMENSIONES y ANGULO AUXILIAR REDUCIDOS ---
-# Eslabones: max 60 mm (antes 80 mm). theta_aux_fm: max 70 deg (antes 180 deg).
+# --- LIMITES (BOUNDS) con dimensiones y angulo auxiliar reducidos ---
+# Eslabones: max 60 mm (antes 80). theta_aux_fm: max 70 deg (antes 180).
 # ==============================================================================
 bounds = [
     (0.015, 0.060), (0.015, 0.060),                  # Bancada1, Bancada2
@@ -72,12 +68,12 @@ bounds = [
     (-np.pi, np.pi),                                 # theta_offset
 ]
 
-# Pesos de la funcion objetivo (forma + monotonicidad + regularizacion suave)
+# Pesos del objetivo (forma + monotonicidad + regularizacion suave)
 W_IFP = 0.40
 W_IFD = 0.60
 W_MONO = 5.0
-# Regularizacion MUY suave: favorece dimensiones y angulo auxiliar pequenos
-# sin degradar el ajuste de forma (chamfer ~ 3e-3 m; estos terminos ~ 1e-5).
+# Regularizacion MUY suave: empuja a dimensiones y angulo aux chicos
+# pero sin degradar el ajuste (chamfer ~ 3e-3 m; estos terminos ~ 1e-5).
 W_REG_DIM = float(os.environ.get('W_REG_DIM', '5e-4'))   # escala de longitudes
 W_REG_AUX = float(os.environ.get('W_REG_AUX', '5e-4'))   # escala del angulo aux
 
@@ -88,16 +84,15 @@ W_REG_AUX = float(os.environ.get('W_REG_AUX', '5e-4'))   # escala del angulo aux
 def run_kinematics(p, th_input):
     """Cinematica directa del exo hasta el extremo de la falange medial (IFD).
 
-    Devuelve un diccionario con las trayectorias 'ifp' e 'ifd' (Nx2, m) y el
-    perfil angular 'theta_fm' (rad), o None si el mecanismo no es valido en
-    algun punto del barrido (longitudes invalidas, no-ensamble o retroceso de
-    la falange medial).
+    Regresa un dict con las trayectorias 'ifp' e 'ifd' (Nx2, m) y el perfil
+    angular 'theta_fm' (rad). Si el mecanismo no jala en algun punto del
+    barrido (longitudes invalidas, no-ensamble o retroceso), regresa None.
     """
     (Bancada1, Bancada2, Link1, Link2, Link3, Link4, Link5,
      Link6, Link7, Link8, Link10, hsp, dsp,
      theta_aux_fm, gear_ratio, theta_offset) = p
 
-    # Validaciones basicas
+    # Checamos que los parametros tengan sentido
     if gear_ratio <= 0:
         return None
     if min(p[:11]) <= 0.005:           # longitudes minimas de eslabon
@@ -170,20 +165,21 @@ def run_kinematics(p, th_input):
         if theta4m2 is None:
             return None
 
-        # Angulo de la falange medial (entre Link10/c2 y la medial via theta_aux_fm)
+        # Angulo de la falange medial (Link10/c2 + theta_aux_fm)
         theta_fm = theta4m2 + theta_aux_fm
 
         # Restriccion anti-gancho: theta_fm debe ser monotono creciente
         if prev_theta_fm is not None:
             delta_fm = (theta_fm - prev_theta_fm + np.pi) % (2 * np.pi) - np.pi
             if delta_fm < -np.deg2rad(0.5):
-                return None
+                return None  # se esta regresando, no sirve
         prev_theta_fm = theta_fm
 
-        # Posicion de la articulacion IFD (extremo de la falange medial)
+        # Posicion de la IFD (extremo de la falange medial)
         px_ifd = FM_REAL * np.cos(theta_fm) + px_ifp
         py_ifd = FM_REAL * np.sin(theta_fm) + py_ifp
 
+        # Checamos que no truene (valores fuera de rango o NaN)
         if (np.abs(px_ifd) > 0.3 or np.abs(py_ifd) > 0.3
                 or not np.isfinite(px_ifd) or not np.isfinite(py_ifd)):
             return None
@@ -200,12 +196,12 @@ def run_kinematics(p, th_input):
 
 
 # ==============================================================================
-# --- FUNCION OBJETIVO (identica para ED y GA) ---
+# --- FUNCION OBJETIVO (identica pa ED y GA) ---
 # ==============================================================================
 def fitness_function(p):
     sim = run_kinematics(p, theta_input)
     if sim is None:
-        return 1000.0
+        return 1000.0  # penalizacion pa mecanismos invalidos
 
     all_mocap = np.vstack([mocap_pts['ifp'], mocap_pts['ifd']])
     all_sim = np.vstack([sim['ifp'], sim['ifd']])
@@ -219,7 +215,7 @@ def fitness_function(p):
     shape_error = W_IFP * err_ifp + W_IFD * err_ifd
     mono_error = W_MONO * mono_ifd
 
-    # Regularizacion suave: dimensiones y angulo auxiliar pequenos
+    # Regularizacion suave: empuja a dimensiones y angulo aux chicos
     suma_links = float(np.sum(p[:11]))                # 11 longitudes (m)
     reg_dim = W_REG_DIM * suma_links
     reg_aux = W_REG_AUX * (p[13] / np.pi)             # theta_aux_fm normalizado
@@ -228,10 +224,10 @@ def fitness_function(p):
 
 
 # ==============================================================================
-# --- EVALUACION / METRICAS EN mm (para reportes) ---
+# --- EVALUACION / METRICAS EN mm (pa los reportes) ---
 # ==============================================================================
 def evaluar(p):
-    """Devuelve un diccionario con errores en mm y datos alineados, o None."""
+    """Calcula errores en mm y datos alineados. Si no jala, regresa None."""
     sim = run_kinematics(p, theta_input)
     if sim is None:
         return None
@@ -253,26 +249,26 @@ def evaluar(p):
 
 
 # ==============================================================================
-# --- VALIDACION CINEMATICA (viabilidad en TODO el movimiento) ---
+# --- VALIDACION CINEMATICA (checa que el mecanismo sea viable) ---
 # ==============================================================================
 def validar_cinematica(p, verbose=False):
-    """Comprueba que los parametros producen un mecanismo VIABLE en todo el
-    barrido de la manivela: ensamblable, sin NaN/Inf y sin retroceso de la
-    falange medial.
+    """Checa que los parametros producen un mecanismo viable en todo el barrido
+    de la manivela: que ensamble, sin NaN/Inf y sin que se regrese la falange
+    medial.
 
-    Devuelve (ok: bool, info: dict).
+    Regresa (ok: bool, info: dict).
     """
     info = {}
     sim = run_kinematics(p, theta_input)
     if sim is None:
-        info['motivo'] = ("La cinematica no es valida en algun punto del "
-                          "barrido (no-ensamble, longitud invalida o retroceso "
-                          "de la falange medial).")
+        info['motivo'] = ("La cinematica no jala en algun punto del barrido "
+                          "(no-ensamble, longitud invalida o retroceso de la "
+                          "falange medial).")
         if verbose:
             print(">> VALIDACION CINEMATICA: FALLO ->", info['motivo'])
         return False, info
 
-    # Comprobaciones de integridad numerica
+    # Checamos que no haya NaN ni Inf
     for k in ('ifp', 'ifd'):
         if not np.all(np.isfinite(sim[k])):
             info['motivo'] = f"Valores no finitos en la trayectoria {k}."
@@ -280,7 +276,7 @@ def validar_cinematica(p, verbose=False):
                 print(">> VALIDACION CINEMATICA: FALLO ->", info['motivo'])
             return False, info
 
-    # Cobertura completa del barrido
+    # Que se haya resuelto todo el barrido completo
     n_ok = len(sim['ifp'])
     if n_ok != N_PUNTOS:
         info['motivo'] = (f"Solo se resolvieron {n_ok}/{N_PUNTOS} poses del "
@@ -289,7 +285,7 @@ def validar_cinematica(p, verbose=False):
             print(">> VALIDACION CINEMATICA: FALLO ->", info['motivo'])
         return False, info
 
-    # Monotonicidad real de theta_fm (no debe retroceder)
+    # Monotonicidad real de theta_fm (que no se regrese)
     th_fm = np.unwrap(sim['theta_fm'])
     delta = np.diff(th_fm)
     info['theta_fm_monotono'] = bool(np.all(delta >= -np.deg2rad(0.5)))

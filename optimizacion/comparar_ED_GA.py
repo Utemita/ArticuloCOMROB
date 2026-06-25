@@ -1,17 +1,18 @@
 """
 comparar_ED_GA.py
 =================
-Genera el material comparativo del articulo COMROB a partir de los resultados
-del modelo SIMPLIFICADO (falange medial) producidos por:
+Script que genera el material comparativo pa el articulo COMROB. Toma los
+resultados del modelo SIMPLIFICADO (falange medial) que sacaron:
   - optimizar_simplificado_ED.py  (Evolucion Diferencial)
   - optimizar_simplificado_GA.py  (Algoritmo Genetico)
 
-Produce:
+Lo que produce:
   - resultados/comparacion_convergencia.png : curvas de convergencia ED vs GA.
   - resultados/comparacion_resumen.csv      : tabla resumen (error, tiempo, nfev).
-  - resumen impreso por consola.
+  - Resumen impreso en consola.
 
-Requiere haber ejecutado antes los dos optimizadores del modelo simplificado.
+Ojo: hay que correr primero los dos optimizadores del simplificado, si no
+este script truena porque no encuentra los archivos.
 """
 import os
 import re
@@ -25,7 +26,7 @@ OUTDIR = os.path.join(os.path.dirname(__file__), 'resultados')
 
 
 def _leer_cabecera(path):
-    """Extrae los pares clave=valor de la 2a linea de cabecera de un .txt."""
+    """Saca los pares clave=valor de la cabecera de un .txt de parametros."""
     datos = {}
     with open(path) as fh:
         for linea in fh:
@@ -42,9 +43,10 @@ def main():
     ed_conv = os.path.join(OUTDIR, 'convergencia_simplificado_ED.csv')
     ga_conv = os.path.join(OUTDIR, 'convergencia_simplificado_GA.csv')
 
+    # Checamos que existan los archivos necesarios
     for f in (ed_txt, ga_txt, ed_conv, ga_conv):
         if not os.path.exists(f):
-            raise SystemExit(f">> Falta {f}. Ejecuta primero los optimizadores "
+            raise SystemExit(f">> Falta {f}. Corre primero los optimizadores "
                              "simplificados ED y GA.")
 
     ed = _leer_cabecera(ed_txt)
@@ -94,7 +96,7 @@ def main():
     plt.savefig(os.path.join(OUTDIR, 'comparacion_convergencia.png'), dpi=150)
     plt.close()
 
-    print(f'\n>> Guardados: comparacion_resumen.csv y '
+    print(f'\n>> Listo. Guardados: comparacion_resumen.csv y '
           f'comparacion_convergencia.png en {OUTDIR}/')
 
 

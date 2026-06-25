@@ -1,15 +1,15 @@
 """
 optimizar_completo_ED.py
 ========================
-Optimizacion del modelo COMPLETO del exoesqueleto (TRES falanges, CINCO
-mecanismos, 21 parametros) mediante EVOLUCION DIFERENCIAL.
+Optimizacion del modelo COMPLETO del exo (TRES falanges, CINCO mecanismos,
+21 parametros) con EVOLUCION DIFERENCIAL.
 
-Se usa Evolucion Diferencial por ser el enfoque GANADOR del estudio comparativo
-realizado sobre el modelo simplificado (ED 2.15 mm vs GA ~5.5 mm). Incorpora las
-mejoras validadas alli: dimensiones acotadas, angulo auxiliar medial-c2
-reducido, regularizacion suave y validacion cinematica de viabilidad.
+Usamos ED porque fue el ganador de la comparacion sobre el modelo simplificado
+(ED ~2.15 mm vs GA ~5.5 mm). Aqui ya van todas las mejoras validadas:
+dimensiones acotadas, angulo auxiliar medial-c2 reducido, regularizacion suave
+y validacion cinematica.
 
-Genera:
+Lo que genera:
   - resultados/parametros_completo_ED.txt           (21 parametros)
   - resultados/trayectorias_completo_ED.csv
   - resultados/biofidelidad_completo_ED.png
@@ -42,7 +42,7 @@ def main():
     print(f'   parametros : {len(M.bounds)}  (17 base + 4 del tercer 4 barras)')
     print(f'   popsize: {POPSIZE}   maxiter: {MAXITER}   seed: {SEED}')
 
-    # Validacion rapida con parametros de referencia (MATLAB + tercer mec.)
+    # Checamos rapido con parametros de referencia (los del MATLAB + tercer mec.)
     p_ref = [0.018, 0.020, 0.035, 0.049, 0.025, 0.020, 0.025,
              0.055, 0.035, 0.052, 0.04601, 0.017, 0.018,
              np.deg2rad(51.39), np.deg2rad(38.78), 2.0, np.deg2rad(109),
@@ -59,18 +59,19 @@ def main():
         updating='deferred', workers=-1, seed=SEED,
     )
     dt = time.time() - t0
-    print(f'\n>> ED finalizada en {dt:.1f}s  (fitness={res.fun:.6f}, '
+    print(f'\n>> ED listo en {dt:.1f}s  (fitness={res.fun:.6f}, '
           f'nfev={res.nfev})')
 
     _reportar(res.x, dt, res.fun, res.nfev)
 
 
 def _reportar(p_opt, dt, fitness, nfev):
+    # Checamos viabilidad
     ok, info = M.validar_cinematica(p_opt, verbose=True)
 
     metr = M.evaluar(p_opt)
     if metr is None:
-        print('>> ADVERTENCIA: el resultado no produce cinematica valida.')
+        print('>> OJO: el resultado no produce cinematica valida.')
         return
 
     print('\n>> RESULTADOS (Evolucion Diferencial - modelo completo)')
@@ -94,6 +95,7 @@ def _reportar(p_opt, dt, fitness, nfev):
     print(f'   back3_3  soporte S3 (a lo largo) : {p_opt[19]*1000:.2f} mm')
     print(f'   up3_3    standoff dorsal         : {p_opt[20]*1000:.2f} mm')
 
+    # --- Guardado ---
     cab = ('Parametros optimizados (21) - Modelo COMPLETO (3 falanges, 5 mecanismos) '
            '- EVOLUCION DIFERENCIAL\n'
            'Indices 0-16: mecanismo base; 17=Link9_3, 18=Link10_3, 19=back3_3, '
@@ -133,8 +135,7 @@ def _reportar(p_opt, dt, fitness, nfev):
     plt.savefig(os.path.join(OUTDIR, 'biofidelidad_completo_ED.png'), dpi=150)
     plt.close()
 
-    print(f'\n>> Archivos guardados en {OUTDIR}/ '
-          '(parametros, trayectorias, biofidelidad).')
+    print(f'\n>> Todo guardado en {OUTDIR}/')
 
 
 if __name__ == '__main__':

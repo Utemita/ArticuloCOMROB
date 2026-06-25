@@ -1,23 +1,22 @@
 """
 comun.py
 ========
-Utilidades compartidas para los experimentos de optimizacion del exoesqueleto
-de rehabilitacion de dedo (articulo COMROB: "Comparacion de tecnicas de
-optimizacion: Algoritmos Geneticos vs Evolucion Diferencial").
+Aqui estan todas las funciones que se reusan en los experimentos de optimizacion
+del exo de rehabilitacion de dedo (lo del articulo COMROB, la comparacion de
+Algoritmos Geneticos vs Evolucion Diferencial).
 
-Contiene:
-  1. Carga y pre-procesado del MOCAP (mocap_pinza_fina_120pts.csv).
-  2. Metricas de forma (distancia de Chamfer) y de monotonicidad.
-  3. Alineacion rigida optima 2D (Kabsch/Procrustes sin escala).
-  4. Solucionadores cinematicos basicos (5 barras, 4 barras, interseccion de
-     circulos) reutilizados por los modelos simplificado y completo.
-  5. Un ALGORITMO GENETICO de codificacion real auto-contenido (sin
-     dependencias externas) con una interfaz compatible con la de
-     scipy.optimize.differential_evolution, para poder comparar ambos
-     enfoques sobre EXACTAMENTE la misma funcion objetivo y los mismos limites.
+Basicamente lo que hay aqui:
+  1. Carga del MOCAP (mocap_pinza_fina_120pts.csv) y su preprocesado.
+  2. Metricas de forma (Chamfer distance) y penalizacion de monotonicidad.
+  3. Alineacion rigida optima 2D (tipo Kabsch/Procrustes, sin escala).
+  4. Solvers cinematicos basicos (5 barras, 4 barras, interseccion de circulos)
+     que usan tanto el modelo simplificado como el completo.
+  5. Un ALGORITMO GENETICO de codificacion real hecho a mano (sin librerias
+     externas) con una interfaz parecida a scipy.optimize.differential_evolution
+     pa poder comparar los dos enfoques sobre la misma funcion objetivo.
 
-Todas las longitudes estan en metros y los angulos en radianes salvo que se
-indique lo contrario.
+Ojo: todas las longitudes en metros y angulos en radianes a menos que se diga
+otra cosa.
 """
 import os
 import numpy as np
@@ -26,7 +25,7 @@ from scipy.spatial.distance import cdist
 from scipy.signal import savgol_filter
 
 # ==============================================================================
-# --- 1. PARAMETROS ANTROPOMETRICOS (longitudes de falanges reales) ---
+# --- 1. PARAMETROS ANTROPOMETRICOS (longitudes de las falanges del dedo) ---
 # ==============================================================================
 FP_REAL = 0.049   # Falange proximal (m)
 FM_REAL = 0.026   # Falange medial   (m)
@@ -37,33 +36,32 @@ FD_REAL = 0.024   # Falange distal   (m)
 # --- 2. CARGA Y CORRECCION DE DATOS MOCAP ---
 # ==============================================================================
 def cargar_mocap(ruta="mocap_pinza_fina_120pts.csv", n_grados_input=85.0):
-    """Carga y limpia los datos de captura de movimiento.
+    """Carga los datos de captura de movimiento y los preprocesa.
 
-    Replica EXACTAMENTE el pre-procesado del optimizador original:
-      (a) Inversion del recorrido (de flexion maxima -> extension a
-          apertura -> cierre).
-      (b) Recorte de DIP a >= 0 grados (no hay hiperextension en el exo).
-      (c) Suavizado Savitzky-Golay (ventana 15, orden 2).
+    Aqui le metemos el mismo preprocesado que usaba el optimizador original:
+      (a) Se invierte el recorrido (de flexion max -> extension a apertura -> cierre).
+      (b) Se recorta DIP a >= 0 grados (el exo no hace hiperextension).
+      (c) Suavizado Savitzky-Golay (ventana 15, orden 2) pa quitar ruido.
 
-    Devuelve un diccionario con:
+    Regresa un dict con:
       - 'ifp','ifd','tip' : nubes de puntos Nx2 de las articulaciones (m).
-      - 'theta_fm','theta_fd' : orientaciones medial y distal del dedo (rad).
+      - 'theta_fm','theta_fd' : orientaciones medial y distal (rad).
       - 'dip_rel' : perfil relativo del angulo DIP (rad).
       - 'theta_input' : barrido de la manivela principal (rad).
       - 'n' : numero de puntos.
     """
     datos = pd.read_csv(ruta)
 
-    # (a) Invertir: de apertura -> cierre (movimiento de agarre)
+    # (a) Invertir: ahora va de apertura -> cierre (movimiento de agarre)
     mcp_raw = datos['Theta_MCP'].values[::-1]
     pip_raw = datos['Theta_PIP'].values[::-1]
     dip_raw = datos['Theta_DIP'].values[::-1]
     n = len(mcp_raw)
 
-    # (b) Recortar DIP a 0 grados minimo
+    # (b) Recortar DIP a 0 grados minimo (nada de hiperextension)
     dip_raw = np.clip(dip_raw, 0.0, None)
 
-    # (c) Suavizado Savitzky-Golay
+    # (c) Suavizado Savitzky-Golay pa quitar ruido del mocap
     win = 15
     if n >= win:
         mcp = savgol_filter(np.deg2rad(mcp_raw), window_length=win, polyorder=2)
@@ -103,13 +101,13 @@ def cargar_mocap(ruta="mocap_pinza_fina_120pts.csv", n_grados_input=85.0):
 # --- 3. METRICAS ---
 # ==============================================================================
 def chamfer_distance(curve_target, curve_sim):
-    """Distancia de Chamfer bidireccional (metrica de forma)."""
+    """Distancia de Chamfer bidireccional -- la metrica de forma que usamos."""
     dists = cdist(curve_target, curve_sim)
     return np.mean(np.min(dists, axis=1)) + np.mean(np.min(dists, axis=0))
 
 
 def optimal_rigid_transform(target, sim):
-    """Transformacion rigida optima (rotacion + traslacion) entre dos nubes."""
+    """Transformacion rigida optima (R + t) entre dos nubes de puntos 2D."""
     c_t = np.mean(target, axis=0)
     c_s = np.mean(sim, axis=0)
     H = (sim - c_s).T @ (target - c_t)
@@ -127,7 +125,7 @@ def apply_transform(points, R, t):
 
 
 def monotonicity_penalty(curve):
-    """Penaliza inversiones de direccion en la trayectoria simulada."""
+    """Penaliza si la trayectoria se regresa (inversiones de direccion)."""
     diffs = np.diff(curve, axis=0)
     arc = np.linalg.norm(diffs, axis=1)
     total = np.sum(arc)
@@ -143,7 +141,9 @@ def monotonicity_penalty(curve):
 # --- 4. SOLUCIONADORES CINEMATICOS BASICOS ---
 # ==============================================================================
 def sol_5_barras(r1, r2, r3, r4, r5, theta1, theta2):
-    """Resuelve la posicion del acoplador de un mecanismo de 5 barras."""
+    """Resuelve la posicion del acoplador de un mecanismo de 5 barras.
+    Si no jala (discriminante negativo o denominador ~0), regresa None.
+    """
     den = r4 * np.cos(theta2) - r1 * np.cos(theta1) + 2 * r3
     if np.abs(den) < 1e-4:
         return None
@@ -156,14 +156,16 @@ def sol_5_barras(r1, r2, r3, r4, r5, theta1, theta2):
          - 2 * r1 * r3 * np.cos(theta1) + r1**2 + r3**2 - r2**2)
     disc = g**2 - 4 * d_ * h
     if disc < 0:
-        return None
+        return None  # no ensambla
     py = (-g + np.sqrt(disc)) / (2 * d_)
     px = e * py + f
     return px, py
 
 
 def solve_four_bar(a, b, c, d, theta2, theta1):
-    """Resuelve el angulo del balancin de un mecanismo de 4 barras (rama abierta)."""
+    """Resuelve el angulo del balancin de un 4 barras (rama abierta).
+    Si no tiene solucion real, regresa None.
+    """
     k1 = a * np.cos(theta2) + d * np.cos(theta1)
     k2 = a * np.sin(theta2) + d * np.sin(theta1)
     k3 = k1**2 + k2**2 + c**2 - b**2
@@ -172,18 +174,18 @@ def solve_four_bar(a, b, c, d, theta2, theta1):
     C1 = 2 * k1 * c - k3
     disc = B1**2 - 4 * A1 * C1
     if disc < 0:
-        return None
+        return None  # no hay solucion real
     return 2 * np.arctan((-B1 - np.sqrt(disc)) / (2 * A1))
 
 
 def circle_intersections(c0, r0, c1, r1):
-    """Interseccion de dos circulos (centros c0,c1 y radios r0,r1)."""
+    """Interseccion de dos circulos. Si no se tocan, regresa None."""
     c0 = np.asarray(c0, dtype=float)
     c1 = np.asarray(c1, dtype=float)
     dvec = c1 - c0
     dist = np.hypot(dvec[0], dvec[1])
     if dist > (r0 + r1) or dist < abs(r0 - r1) or dist == 0:
-        return None
+        return None  # no se intersectan
     aa = (r0**2 - r1**2 + dist**2) / (2 * dist)
     hh2 = r0**2 - aa**2
     if hh2 < 0:
@@ -198,7 +200,7 @@ def circle_intersections(c0, r0, c1, r1):
 # --- 5. ALGORITMO GENETICO DE CODIFICACION REAL ---
 # ==============================================================================
 class ResultadoOptim:
-    """Contenedor de resultado compatible con scipy.optimize (campos .x y .fun)."""
+    """Contenedor del resultado, compatible con scipy (tiene .x y .fun)."""
 
     def __init__(self, x, fun, nit, nfev, historial):
         self.x = np.asarray(x)
@@ -213,15 +215,14 @@ class ResultadoOptim:
 
 
 def _sbx_vectorizado(padres1, padres2, lower, upper, eta_c, rng):
-    """Cruce binario simulado (SBX) VECTORIZADO sobre lotes de parejas.
-
-    padres1, padres2 : arrays (m, dim). Devuelve dos arrays de hijos (m, dim).
+    """Cruce SBX vectorizado sobre lotes de parejas.
+    Ojo: padres1, padres2 son (m, dim). Regresa dos arrays de hijos (m, dim).
     """
     m, dim = padres1.shape
     h1 = padres1.copy()
     h2 = padres2.copy()
 
-    # Genes donde se aplica el cruce (50%) y donde los padres difieren
+    # Genes donde se aplica el cruce (50%) y donde los padres son distintos
     cruzar = (rng.random((m, dim)) <= 0.5) & (np.abs(padres1 - padres2) > 1e-14)
 
     x1 = np.minimum(padres1, padres2)
@@ -254,7 +255,7 @@ def _sbx_vectorizado(padres1, padres2, lower, upper, eta_c, rng):
 
 
 def _mutacion_polinomial_vectorizada(pop, lower, upper, span, eta_m, mutpb, rng):
-    """Mutacion polinomial VECTORIZADA sobre toda la poblacion (m, dim)."""
+    """Mutacion polinomial vectorizada sobre toda la poblacion (m, dim)."""
     y = pop.copy()
     mutar = rng.random(pop.shape) <= mutpb
     span_safe = np.where(span > 0, span, 1.0)
@@ -278,30 +279,30 @@ def algoritmo_genetico(func, bounds, popsize=40, ngen=300,
                        cxpb=0.9, mutpb=0.15, eta_c=15.0, eta_m=20.0,
                        tournsize=3, n_elite=2, seed=None, disp=False,
                        tol=1e-8, paciencia=60, callback=None):
-    """Algoritmo genetico de codificacion real (real-coded GA), VECTORIZADO.
+    """Algoritmo genetico de codificacion real, vectorizado.
 
-    Operadores estandar de la literatura de GA con representacion real:
-      - Seleccion por TORNEO (tournsize individuos compiten).
-      - Cruce SBX (Simulated Binary Crossover, indice de distribucion eta_c).
-      - Mutacion POLINOMIAL (polynomial mutation, indice eta_m).
-      - ELITISMO (los n_elite mejores pasan intactos a la siguiente generacion).
+    Basicamente es un GA clasico con representacion real:
+      - Seleccion por torneo (tournsize individuos compiten).
+      - Cruce SBX (Simulated Binary Crossover, indice eta_c).
+      - Mutacion polinomial (indice eta_m).
+      - Elitismo (los n_elite mejores pasan directo a la siguiente gen).
 
-    Interfaz analoga a differential_evolution: recibe `func` (a minimizar) y
-    `bounds` (lista de tuplas (min,max)); devuelve un objeto con .x y .fun.
+    La interfaz es analoga a differential_evolution: le pasas func y bounds y
+    te regresa un objeto con .x y .fun. Esto es pa que la comparacion sea
+    directa.
 
-    Parametros
-    ----------
-    popsize   : tamano de poblacion.
-    ngen      : numero de generaciones.
-    cxpb      : probabilidad de cruce por pareja.
-    mutpb     : probabilidad de mutacion por gen.
-    eta_c     : indice de distribucion del SBX (mayor = hijos mas cercanos a padres).
-    eta_m     : indice de la mutacion polinomial (mayor = perturbacion menor).
-    tournsize : numero de competidores en el torneo.
-    n_elite   : numero de individuos elite preservados.
-    seed      : semilla del generador aleatorio (reproducibilidad).
-    paciencia : generaciones sin mejora relativa > tol antes de parar (early stop).
-    callback  : funcion opcional callback(gen, mejor_x, mejor_fun).
+    Parametros principales:
+      popsize   - tamano de la poblacion
+      ngen      - generaciones maximas
+      cxpb      - prob de cruce por pareja
+      mutpb     - prob de mutacion por gen
+      eta_c     - indice del SBX (mas grande = hijos mas pegados a los padres)
+      eta_m     - indice de la mutacion polinomial (mas grande = perturbacion menor)
+      tournsize - cuantos compiten en el torneo
+      n_elite   - cuantos pasan directo (elitismo)
+      seed      - semilla pa reproducibilidad
+      paciencia - gens sin mejora antes del early stop
+      callback  - funcion opcional callback(gen, mejor_x, mejor_fun)
     """
     rng = np.random.default_rng(seed)
     bounds = np.asarray(bounds, dtype=float)
@@ -333,7 +334,7 @@ def algoritmo_genetico(func, bounds, popsize=40, ngen=300,
     gen = 0
 
     for gen in range(1, ngen + 1):
-        # Elitismo: conservar los mejores intactos
+        # Elitismo: los mejores pasan intactos
         orden = np.argsort(fitness)
         elite = pop[orden[:n_elite]].copy()
 
@@ -376,9 +377,10 @@ def algoritmo_genetico(func, bounds, popsize=40, ngen=300,
         if disp and (gen % 20 == 0 or gen == 1):
             print(f"   [GA] gen {gen:4d}/{ngen}  mejor fitness = {mejor_fun:.6f}")
 
+        # Si ya no mejora, paramos
         if sin_mejora >= paciencia:
             if disp:
-                print(f"   [GA] convergencia (sin mejora en {paciencia} gen) "
+                print(f"   [GA] ya convergio (sin mejora en {paciencia} gen) "
                       f"en la generacion {gen}")
             break
 
