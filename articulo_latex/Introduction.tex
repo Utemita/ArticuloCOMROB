@@ -20,9 +20,9 @@ empleo de metaheurísticas poblacionales como la Evolución Diferencial (ED) y l
 Algoritmos Genéticos (AG), capaces de recorrer el espacio de búsqueda sin
 necesitar información de derivadas \cite{ref_de_fourbar,ref_tlbo}.
 
-Aunque ambas familias de algoritmos se usan ampliamente, su desempeño relativo
-depende de la naturaleza del problema, de cómo se representan las variables y del
-ajuste de los hiperparámetros \cite{ref_ga_pso_de,ref_de_vs_ga}. La elección
+Aunque ambas familias de algoritmos se usan ampliamente, cuál de las dos resulta
+más eficaz depende de la naturaleza del problema, de cómo se representan las
+variables y del ajuste de los hiperparámetros \cite{ref_ga_pso_de,ref_de_vs_ga}. La elección
 entre uno u otro rara vez es evidente y casi siempre requiere ponerlos a prueba
 sobre el caso concreto que se quiere resolver. En este trabajo abordamos esa
 pregunta para un mecanismo de exoesqueleto de dedo real: comparamos ambos
@@ -34,18 +34,18 @@ montó el experimento.
 Para que la comparación sea reproducible, se optimiza una versión \emph{parcial}
 del mecanismo, que reproduce el movimiento hasta la falange medial (articulación
 IFD). Este caso es más pequeño que el modelo completo de tres falanges, pero
-conserva las dificultades esenciales del problema ---el acoplamiento entre
-etapas, las restricciones de ensamble y la necesidad de que el movimiento no
-retroceda---, lo que permite estudiar el efecto del algoritmo de optimización sin
+conserva las dificultades esenciales del problema (el acoplamiento entre etapas,
+las restricciones de ensamble y la necesidad de que el movimiento no retroceda),
+lo que permite estudiar el efecto del algoritmo de optimización sin
 la complejidad añadida del modelo completo.
 
 \subsection{Contribuciones}
-Las contribuciones de este artículo son: (i) una formulación unificada del
+Las contribuciones de este artículo son: (i) una formulación del
 problema de síntesis dimensional parcial con 16 parámetros, función objetivo
 basada en la distancia de Chamfer ponderada y penalizaciones de viabilidad;
 (ii) una comparación controlada de ED y AG bajo condiciones idénticas, que
 evalúa no sólo el error de ajuste sino también la coherencia y la compacidad del
 mecanismo resultante; y (iii) un análisis de las razones por las que la ED
-supera al AG en este dominio continuo. El modelo cinemático y el diseño del
-mecanismo empleados como base fueron desarrollados por Pavel Palma Nicolás, ex
-alumno de la universidad de los autores.
+conserva una ligera ventaja en este problema de variables continuas. El modelo
+cinemático y el diseño del mecanismo empleados como base fueron desarrollados por
+Pavel Palma Nicolás.
