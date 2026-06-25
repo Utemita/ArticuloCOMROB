@@ -9,14 +9,24 @@ Este es el segundo contendiente del articulo. Usa la MISMA funcion objetivo y
 los MISMOS limites que la version de ED (optimizar_simplificado_ED.py), asi
 que la comparacion es justa.
 
+SINTONIZACION DE HIPERPARAMETROS (Optuna):
+  Igual que la ED, los hiperparametros del GA se sintonizan con optimizacion
+  bayesiana (Optuna, muestreador TPE) usando el MISMO numero de trials, para
+  que la comparacion sea SIMETRICA. El flujo es de dos etapas:
+    1) BUSQUEDA: Optuna prueba N_TRIALS_OPTUNA configuraciones con corridas
+       cortas (GA_NGEN_OPTUNA generaciones) y se queda con la mejor.
+    2) CORRIDA PROFUNDA: se vuelve a optimizar con los mejores hiperparametros
+       y el presupuesto completo (GA_NGEN generaciones).
+
 Lo que genera:
-  - resultados/parametros_simplificado_GA.txt
+  - resultados/parametros_simplificado_GA.txt   (incluye hiperparametros elegidos)
   - resultados/trayectorias_simplificado_GA.csv
   - resultados/biofidelidad_simplificado_GA.png
   - resultados/convergencia_simplificado_GA.csv
 
-Presupuesto configurable por entorno: GA_POPSIZE (70), GA_NGEN (300),
-GA_SEED (42).
+Presupuesto configurable por entorno:
+  N_TRIALS_OPTUNA (25), GA_NGEN_OPTUNA (60), GA_NGEN (300),
+  GA_SEED (42), OPTUNA_SEED (42).
 """
 import os
 import time
@@ -25,39 +35,109 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
+import optuna
 
 import modelo_simplificado as M
 from comun import algoritmo_genetico
 
-POPSIZE = int(os.environ.get('GA_POPSIZE', '70'))
-NGEN = int(os.environ.get('GA_NGEN', '300'))
-SEED = int(os.environ.get('GA_SEED', '42'))
+optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+# --- Presupuesto (configurable por variables de entorno) ---
+N_TRIALS_OPTUNA = int(os.environ.get('N_TRIALS_OPTUNA', '25'))
+NGEN_OPTUNA     = int(os.environ.get('GA_NGEN_OPTUNA', '60'))
+NGEN            = int(os.environ.get('GA_NGEN', '300'))
+SEED            = int(os.environ.get('GA_SEED', '42'))
+OPTUNA_SEED     = int(os.environ.get('OPTUNA_SEED', '42'))
 OUTDIR = os.path.join(os.path.dirname(__file__), 'resultados')
+
+
+def _correr_ga(popsize, cxpb, mutpb, eta_c, eta_m, tournsize,
+               ngen, seed, paciencia, disp=False, callback=None):
+    """Lanza el algoritmo genetico con los hiperparametros dados."""
+    return algoritmo_genetico(
+        M.fitness_function, M.bounds,
+        popsize=popsize, ngen=ngen,
+        cxpb=cxpb, mutpb=mutpb, eta_c=eta_c, eta_m=eta_m,
+        tournsize=tournsize, n_elite=2, seed=seed,
+        disp=disp, paciencia=paciencia, callback=callback,
+    )
+
+
+# ==============================================================================
+# --- ETAPA 1: SINTONIZACION BAYESIANA (Optuna) ---
+# ==============================================================================
+def objective_optuna(trial):
+    """Cada trial prueba una configuracion de hiperparametros del GA con una
+    corrida corta y regresa el mejor fitness obtenido (a minimizar)."""
+    popsize = trial.suggest_int('popsize', 40, 80, step=2)
+    cxpb = trial.suggest_float('cxpb', 0.6, 0.95)
+    mutpb = trial.suggest_float('mutpb', 0.05, 0.30)
+    eta_c = trial.suggest_float('eta_c', 5.0, 30.0)
+    eta_m = trial.suggest_float('eta_m', 10.0, 40.0)
+    tournsize = trial.suggest_int('tournsize', 2, 4)
+
+    # En la busqueda corta no hacemos early-stop (paciencia alta) para que
+    # todos los trials usen el mismo presupuesto efectivo.
+    res = _correr_ga(popsize, cxpb, mutpb, eta_c, eta_m, tournsize,
+                     ngen=NGEN_OPTUNA, seed=SEED, paciencia=NGEN_OPTUNA + 1)
+    return float(res.fun)
+
+
+def sintonizar():
+    print('=' * 64)
+    print(' ETAPA 1: SINTONIZACION DE HIPERPARAMETROS - GA (Optuna/TPE)')
+    print('=' * 64)
+    print(f'   trials: {N_TRIALS_OPTUNA}   ngen por trial: {NGEN_OPTUNA}')
+    sampler = optuna.samplers.TPESampler(seed=OPTUNA_SEED)
+    study = optuna.create_study(direction='minimize', sampler=sampler)
+    t0 = time.time()
+    study.optimize(objective_optuna, n_trials=N_TRIALS_OPTUNA,
+                   show_progress_bar=False)
+    dt = time.time() - t0
+    bp = study.best_params
+    print(f'\n>> Mejor configuracion (fitness corto={study.best_value:.6f}, '
+          f'{dt:.1f}s):')
+    for k, v in bp.items():
+        print(f'   {k:16s}: {v}')
+    return bp, dt
 
 
 def main():
     os.makedirs(OUTDIR, exist_ok=True)
+
+    # --- ETAPA 1: sintonizar con Optuna ---
+    bp, t_tune = sintonizar()
+
+    # --- ETAPA 2: corrida profunda con los mejores hiperparametros ---
+    print('\n' + '=' * 64)
+    print(' ETAPA 2: CORRIDA PROFUNDA - ALGORITMO GENETICO')
     print('=' * 64)
-    print(' OPTIMIZACION SIMPLIFICADA (FALANGE MEDIAL) - ALGORITMO GENETICO')
-    print('=' * 64)
-    print(f'   parametros : {len(M.bounds)}   popsize: {POPSIZE}   '
+    print(f'   parametros : {len(M.bounds)}   popsize: {bp["popsize"]}   '
           f'ngen: {NGEN}   seed: {SEED}')
 
     t0 = time.time()
-    res = algoritmo_genetico(
-        M.fitness_function, M.bounds,
-        popsize=POPSIZE, ngen=NGEN,
-        cxpb=0.9, mutpb=0.15, eta_c=15.0, eta_m=20.0,
-        tournsize=3, n_elite=2, seed=SEED, disp=True, paciencia=100,
-    )
+    res = _correr_ga(bp['popsize'], bp['cxpb'], bp['mutpb'], bp['eta_c'],
+                     bp['eta_m'], bp['tournsize'],
+                     ngen=NGEN, seed=SEED, paciencia=100, disp=True)
     dt = time.time() - t0
     print(f'\n>> GA listo en {dt:.1f}s  (fitness={res.fun:.6f}, '
           f'generaciones={res.nit}, nfev={res.nfev})')
 
-    _reportar(res.x, dt, res.fun, res.historial, res.nfev)
+    hp = {
+        'popsize': bp['popsize'],
+        'cxpb': round(bp['cxpb'], 4),
+        'mutpb': round(bp['mutpb'], 4),
+        'eta_c': round(bp['eta_c'], 2),
+        'eta_m': round(bp['eta_m'], 2),
+        'tournsize': bp['tournsize'],
+        'n_elite': 2,
+        'optuna_trials': N_TRIALS_OPTUNA,
+        'tiempo_tune_s': round(t_tune, 1),
+    }
+    _reportar(res.x, dt, res.fun, res.historial, res.nfev, hp)
 
 
-def _reportar(p_opt, dt, fitness, historial, nfev):
+def _reportar(p_opt, dt, fitness, historial, nfev, hp):
     ok, info = M.validar_cinematica(p_opt, verbose=True)
 
     metr = M.evaluar(p_opt)
@@ -78,11 +158,13 @@ def _reportar(p_opt, dt, fitness, historial, nfev):
     for nombre, valor in zip(M.NOMBRES, p_opt):
         print(f'   {nombre:26s}: {valor:.6f}')
 
+    hp_str = '  '.join(f'{k}={v}' for k, v in hp.items())
     cab = ('Parametros optimizados (16) - Modelo SIMPLIFICADO (falange medial) '
            '- ALGORITMO GENETICO\n'
            f'fitness={fitness:.6f}  err_global_mm={metr["err_global_mm"]:.4f}  '
            f'err_ifp_mm={metr["err_ifp_mm"]:.4f}  err_ifd_mm={metr["err_ifd_mm"]:.4f}  '
            f'tiempo_s={dt:.1f}  nfev={nfev}\n'
+           f'HIPERPARAMETROS (Optuna): {hp_str}\n'
            + ' | '.join(M.NOMBRES))
     np.savetxt(os.path.join(OUTDIR, 'parametros_simplificado_GA.txt'),
                p_opt, header=cab)

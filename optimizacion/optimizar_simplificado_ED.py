@@ -8,14 +8,24 @@ Este es uno de los dos contendientes del articulo COMROB. Usa la MISMA funcion
 objetivo y los MISMOS limites que la version de GA (optimizar_simplificado_GA.py),
 asi que la comparacion mide el algoritmo, no el problema.
 
+SINTONIZACION DE HIPERPARAMETROS (Optuna):
+  Para que la comparacion ED vs GA sea SIMETRICA, los hiperparametros de la ED
+  se sintonizan con optimizacion bayesiana (Optuna, muestreador TPE) en una
+  etapa previa, igual que se hace con el GA. El flujo es de dos etapas:
+    1) BUSQUEDA: Optuna prueba N_TRIALS_OPTUNA configuraciones con corridas
+       cortas (DE_MAXITER_OPTUNA generaciones) y se queda con la mejor.
+    2) CORRIDA PROFUNDA: se vuelve a optimizar con los mejores hiperparametros
+       y el presupuesto completo (OPT_MAXITER generaciones).
+
 Lo que genera:
-  - resultados/parametros_simplificado_ED.txt
+  - resultados/parametros_simplificado_ED.txt   (incluye hiperparametros elegidos)
   - resultados/trayectorias_simplificado_ED.csv
   - resultados/biofidelidad_simplificado_ED.png
   - resultados/convergencia_simplificado_ED.csv
 
-Presupuesto configurable por entorno: OPT_POPSIZE (15), OPT_MAXITER (300),
-OPT_SEED (42).
+Presupuesto configurable por entorno:
+  N_TRIALS_OPTUNA (25), DE_MAXITER_OPTUNA (40), OPT_MAXITER (300),
+  OPT_SEED (42), OPTUNA_SEED (42).
 """
 import os
 import time
@@ -24,23 +34,85 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
+import optuna
 from scipy.optimize import differential_evolution
 
 import modelo_simplificado as M
 
-POPSIZE = int(os.environ.get('OPT_POPSIZE', '15'))
-MAXITER = int(os.environ.get('OPT_MAXITER', '300'))
-SEED = int(os.environ.get('OPT_SEED', '42'))
+optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+# --- Presupuesto (configurable por variables de entorno) ---
+N_TRIALS_OPTUNA   = int(os.environ.get('N_TRIALS_OPTUNA', '25'))
+DE_MAXITER_OPTUNA = int(os.environ.get('DE_MAXITER_OPTUNA', '40'))
+MAXITER           = int(os.environ.get('OPT_MAXITER', '300'))
+SEED              = int(os.environ.get('OPT_SEED', '42'))
+OPTUNA_SEED       = int(os.environ.get('OPTUNA_SEED', '42'))
 OUTDIR = os.path.join(os.path.dirname(__file__), 'resultados')
+
+
+def _correr_ed(strategy, popsize, mut_low, mut_high, recombination,
+               maxiter, seed, callback=None):
+    """Lanza differential_evolution con los hiperparametros dados."""
+    return differential_evolution(
+        M.fitness_function, M.bounds,
+        strategy=strategy, popsize=popsize,
+        mutation=(mut_low, mut_high), recombination=recombination,
+        maxiter=maxiter, tol=1e-7,
+        polish=True, disp=False,
+        updating='deferred', workers=-1, seed=seed,
+        callback=callback,
+    )
+
+
+# ==============================================================================
+# --- ETAPA 1: SINTONIZACION BAYESIANA (Optuna) ---
+# ==============================================================================
+def objective_optuna(trial):
+    """Cada trial prueba una configuracion de hiperparametros de la ED con una
+    corrida corta y regresa el mejor fitness obtenido (a minimizar)."""
+    strategy = trial.suggest_categorical(
+        'strategy', ['best1bin', 'rand1bin', 'best1exp', 'currenttobest1bin'])
+    popsize = trial.suggest_int('popsize', 15, 30)
+    mut_low = trial.suggest_float('mut_low', 0.3, 0.7)
+    mut_high = trial.suggest_float('mut_high', 0.8, 1.2)
+    recombination = trial.suggest_float('recombination', 0.5, 0.95)
+
+    res = _correr_ed(strategy, popsize, mut_low, mut_high, recombination,
+                     maxiter=DE_MAXITER_OPTUNA, seed=SEED)
+    return float(res.fun)
+
+
+def sintonizar():
+    print('=' * 64)
+    print(' ETAPA 1: SINTONIZACION DE HIPERPARAMETROS - ED (Optuna/TPE)')
+    print('=' * 64)
+    print(f'   trials: {N_TRIALS_OPTUNA}   maxiter por trial: {DE_MAXITER_OPTUNA}')
+    sampler = optuna.samplers.TPESampler(seed=OPTUNA_SEED)
+    study = optuna.create_study(direction='minimize', sampler=sampler)
+    t0 = time.time()
+    study.optimize(objective_optuna, n_trials=N_TRIALS_OPTUNA,
+                   show_progress_bar=False)
+    dt = time.time() - t0
+    bp = study.best_params
+    print(f'\n>> Mejor configuracion (fitness corto={study.best_value:.6f}, '
+          f'{dt:.1f}s):')
+    for k, v in bp.items():
+        print(f'   {k:16s}: {v}')
+    return bp, dt
 
 
 def main():
     os.makedirs(OUTDIR, exist_ok=True)
+
+    # --- ETAPA 1: sintonizar con Optuna ---
+    bp, t_tune = sintonizar()
+
+    # --- ETAPA 2: corrida profunda con los mejores hiperparametros ---
+    print('\n' + '=' * 64)
+    print(' ETAPA 2: CORRIDA PROFUNDA - EVOLUCION DIFERENCIAL')
     print('=' * 64)
-    print(' OPTIMIZACION SIMPLIFICADA (FALANGE MEDIAL) - EVOLUCION DIFERENCIAL')
-    print('=' * 64)
-    print(f'   parametros : {len(M.bounds)}   popsize: {POPSIZE}   '
-          f'maxiter: {MAXITER}   seed: {SEED}')
+    print(f'   parametros : {len(M.bounds)}   popsize: {bp["popsize"]}   '
+          f'maxiter: {MAXITER}   seed: {SEED}   strategy: {bp["strategy"]}')
 
     historial = []
 
@@ -48,23 +120,26 @@ def main():
         historial.append(M.fitness_function(xk))
 
     t0 = time.time()
-    res = differential_evolution(
-        M.fitness_function, M.bounds,
-        strategy='best1bin', popsize=POPSIZE,
-        mutation=(0.5, 1.0), recombination=0.7,
-        maxiter=MAXITER, tol=1e-7,
-        polish=True, disp=True,
-        updating='deferred', workers=-1, seed=SEED,
-        callback=cb,
-    )
+    res = _correr_ed(bp['strategy'], bp['popsize'], bp['mut_low'],
+                     bp['mut_high'], bp['recombination'],
+                     maxiter=MAXITER, seed=SEED, callback=cb)
     dt = time.time() - t0
     print(f'\n>> ED listo en {dt:.1f}s  (fitness={res.fun:.6f}, '
           f'nfev={res.nfev})')
 
-    _reportar(res.x, dt, res.fun, historial, res.nfev)
+    hp = {
+        'strategy': bp['strategy'],
+        'popsize': bp['popsize'],
+        'mutation_low': round(bp['mut_low'], 4),
+        'mutation_high': round(bp['mut_high'], 4),
+        'recombination': round(bp['recombination'], 4),
+        'optuna_trials': N_TRIALS_OPTUNA,
+        'tiempo_tune_s': round(t_tune, 1),
+    }
+    _reportar(res.x, dt, res.fun, historial, res.nfev, hp)
 
 
-def _reportar(p_opt, dt, fitness, historial, nfev):
+def _reportar(p_opt, dt, fitness, historial, nfev, hp):
     # --- Checamos viabilidad cinematica ---
     ok, info = M.validar_cinematica(p_opt, verbose=True)
 
@@ -86,12 +161,14 @@ def _reportar(p_opt, dt, fitness, historial, nfev):
     for nombre, valor in zip(M.NOMBRES, p_opt):
         print(f'   {nombre:26s}: {valor:.6f}')
 
-    # --- Guardado de parametros ---
+    # --- Guardado de parametros (incluye hiperparametros elegidos por Optuna) ---
+    hp_str = '  '.join(f'{k}={v}' for k, v in hp.items())
     cab = ('Parametros optimizados (16) - Modelo SIMPLIFICADO (falange medial) '
            '- EVOLUCION DIFERENCIAL\n'
            f'fitness={fitness:.6f}  err_global_mm={metr["err_global_mm"]:.4f}  '
            f'err_ifp_mm={metr["err_ifp_mm"]:.4f}  err_ifd_mm={metr["err_ifd_mm"]:.4f}  '
            f'tiempo_s={dt:.1f}  nfev={nfev}\n'
+           f'HIPERPARAMETROS (Optuna): {hp_str}\n'
            + ' | '.join(M.NOMBRES))
     np.savetxt(os.path.join(OUTDIR, 'parametros_simplificado_ED.txt'),
                p_opt, header=cab)

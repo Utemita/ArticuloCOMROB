@@ -98,10 +98,26 @@ def fig_dimensiones():
     print(">> guardado:", out)
 
 
+def _load_resumen():
+    """Lee los errores (global/IFP/IFD) de comparacion_resumen.csv."""
+    import csv
+    rows = {}
+    with open(os.path.join(OUT, "comparacion_resumen.csv")) as fh:
+        for r in csv.DictReader(fh):
+            rows[r["metodo"]] = r
+    ed = rows["Evolucion Diferencial"]
+    ga = rows["Algoritmo Genetico"]
+    ed_err = [float(ed["error_global_mm"]), float(ed["error_ifp_mm"]),
+              float(ed["error_ifd_mm"])]
+    ga_err = [float(ga["error_global_mm"]), float(ga["error_ifp_mm"]),
+              float(ga["error_ifd_mm"])]
+    return ed_err, ga_err
+
+
 def fig_errores():
-    # Errores (mm) -> grafico unico de barras (sin panel de presupuesto)
-    ed_err = [2.1523, 2.6564, 1.6482]   # global, ifp, ifd
-    ga_err = [5.5486, 3.9250, 7.1721]
+    # Errores (mm) -> grafico unico de barras (sin panel de presupuesto).
+    # Las cifras se leen de comparacion_resumen.csv para no quedar desfasadas.
+    ed_err, ga_err = _load_resumen()
     cats = ["Global", "IFP", "IFD"]
 
     fig, ax1 = plt.subplots(figsize=(6.2, 4.0))
@@ -119,7 +135,8 @@ def fig_errores():
     ax1.set_ylabel("Error de forma (Chamfer) [mm]", fontsize=11)
     ax1.legend(fontsize=10)
     ax1.grid(True, axis="y", ls=":", alpha=0.6)
-    ax1.set_ylim(0, 8.2)
+    ymax = max(ed_err + ga_err) * 1.25
+    ax1.set_ylim(0, ymax)
 
     plt.tight_layout()
     out = os.path.join(OUT, "comparacion_errores.png")

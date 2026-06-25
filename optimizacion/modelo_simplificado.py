@@ -81,12 +81,19 @@ W_REG_AUX = float(os.environ.get('W_REG_AUX', '5e-4'))   # escala del angulo aux
 # ==============================================================================
 # --- MODELO CINEMATICO SIMPLIFICADO (hasta la IFD / falange medial) ---
 # ==============================================================================
-def run_kinematics(p, th_input):
-    """Cinematica directa del exo hasta el extremo de la falange medial (IFD).
+def pose_juntas(p, th2):
+    """Posiciones (en m) de TODAS las juntas del modelo simplificado para UNA
+    sola pose de la manivela (th2 en rad).
 
-    Regresa un dict con las trayectorias 'ifp' e 'ifd' (Nx2, m) y el perfil
-    angular 'theta_fm' (rad). Si el mecanismo no jala en algun punto del
-    barrido (longitudes invalidas, no-ensamble o retroceso), regresa None.
+    Esta es la FUENTE UNICA DE VERDAD de la geometria del mecanismo: tanto
+    run_kinematics (para optimizar/evaluar) como el diagrama de eslabones
+    consumen esta funcion, de modo que el dibujo refleja exactamente el
+    mecanismo que se optimizo (mismas ecuaciones, mismas ramas de ensamble).
+
+    Regresa un dict con las posiciones de las juntas:
+        MCF, G1, G2, T2, P, M4, S1, S2, IFP, P2, P3, IFD
+    mas 'theta_fm' y 'theta4m2' (rad). Si algun submecanismo no ensambla o los
+    parametros son invalidos, regresa None.
     """
     (Bancada1, Bancada2, Link1, Link2, Link3, Link4, Link5,
      Link6, Link7, Link8, Link10, hsp, dsp,
@@ -108,65 +115,116 @@ def run_kinematics(p, th_input):
     rs2 = np.sqrt(hsp**2 + (FP_REAL - dsp)**2)
     theta_aux_s2 = np.arctan2(hsp, FP_REAL - dsp)
 
+    th1 = (th2 / gear_ratio) + theta_offset
+
+    # --- Mecanismo 1: 5 barras ---
+    res5 = sol_5_barras(Link4, Link3, r3_val, Link1, Link2, th1, th2)
+    if res5 is None:
+        return None
+    pxP, pyP = res5
+
+    # --- Mecanismo 1: 4 barras ---
+    theta4 = solve_four_bar(Link4, Link5, c1, Bancada2, th1, theta14B)
+    if theta4 is None:
+        return None
+
+    theta_fp = theta4 + np.arctan2(hsp, dsp)
+    px_ifp = FP_REAL * np.cos(theta_fp) - Bancada2 * np.cos(theta14B) - r3_val
+    py_ifp = FP_REAL * np.sin(theta_fp) - Bancada2 * np.sin(theta14B)
+
+    pxs1 = c1 * np.cos(theta4) - Bancada2 * np.cos(theta14B) - r3_val
+    pys1 = c1 * np.sin(theta4) - Bancada2 * np.sin(theta14B)
+
+    theta_ps2 = theta_fp - theta_aux_s2
+    pxs2 = rs2 * np.cos(theta_ps2) - Bancada2 * np.cos(theta14B) - r3_val
+    pys2 = rs2 * np.sin(theta_ps2) - Bancada2 * np.sin(theta14B)
+
+    pxm4 = Link4 * np.cos(th2) - r3_val
+    pym4 = Link4 * np.sin(th2)
+
+    # Junta REAL de la manivela del 1.er 5-barras (extremo de L4 a angulo th1).
+    # Es la junta que comparten L3, L4 y L5 en el diagrama; el punto (pxm4,pym4)
+    # de arriba es solo la referencia interna (a th2) del mecanismo secundario.
+    pxJ4 = Link4 * np.cos(th1) - r3_val
+    pyJ4 = Link4 * np.sin(th1)
+
+    # --- Mecanismo 2: 5 barras (referencia secundaria) ---
+    theta_roll = np.arctan2(pym4 - pys1, pxm4 - pxs1)
+    theta1m2 = np.arctan2(pys2 - pys1, pxs2 - pxs1) - theta_roll
+    theta2m2 = np.arctan2(pyP - pym4, pxP - pxm4) - theta_roll
+
+    res5_2 = sol_5_barras(FP_REAL - 2.0 * dsp, Link7, Link5 / 2.0, Link3, Link6,
+                          theta1m2, theta2m2)
+    if res5_2 is None:
+        return None
+    px_local, py_local = res5_2
+
+    mag = np.sqrt(px_local**2 + py_local**2)
+    theta_loc = np.arctan2(py_local, px_local)
+    px_aux = (pxs1 + pxm4) / 2.0
+    py_aux = (pys1 + pym4) / 2.0
+    pxP2 = mag * np.cos(theta_loc + theta_roll) + px_aux
+    pyP2 = mag * np.sin(theta_loc + theta_roll) + py_aux
+
+    # --- Mecanismo 2: 4 barras ---
+    theta1m42 = np.arctan2(pys2 - py_ifp, pxs2 - px_ifp)
+    theta2m42 = np.arctan2(pyP2 - pys2, pxP2 - pxs2)
+
+    theta4m2 = solve_four_bar(Link7, Link8, Link10, c1, theta2m42, theta1m42)
+    if theta4m2 is None:
+        return None
+
+    # Angulo de la falange medial (Link10/c2 + theta_aux_fm)
+    theta_fm = theta4m2 + theta_aux_fm
+
+    # Posicion de la IFD (extremo de la falange medial)
+    px_ifd = FM_REAL * np.cos(theta_fm) + px_ifp
+    py_ifd = FM_REAL * np.sin(theta_fm) + py_ifp
+
+    # Extremo del balancin c2 (Link10) del 2.o 4 barras, anclado en IFP
+    pxP3 = px_ifp + Link10 * np.cos(theta4m2)
+    pyP3 = py_ifp + Link10 * np.sin(theta4m2)
+
+    return {
+        'MCF': np.array([-r3_val, -Bancada2]),
+        'G1': np.array([-r3_val, 0.0]),
+        'G2': np.array([r3_val, 0.0]),
+        'T2': np.array([r3_val + Link1 * np.cos(th2), Link1 * np.sin(th2)]),
+        'P': np.array([pxP, pyP]),
+        'M4': np.array([pxJ4, pyJ4]),
+        'S1': np.array([pxs1, pys1]),
+        'S2': np.array([pxs2, pys2]),
+        'IFP': np.array([px_ifp, py_ifp]),
+        'P2': np.array([pxP2, pyP2]),
+        'P3': np.array([pxP3, pyP3]),
+        'IFD': np.array([px_ifd, py_ifd]),
+        'theta_fm': float(theta_fm),
+        'theta4m2': float(theta4m2),
+    }
+
+
+def run_kinematics(p, th_input):
+    """Cinematica directa del exo hasta el extremo de la falange medial (IFD).
+
+    Regresa un dict con las trayectorias 'ifp' e 'ifd' (Nx2, m) y el perfil
+    angular 'theta_fm' (rad). Si el mecanismo no jala en algun punto del
+    barrido (longitudes invalidas, no-ensamble o retroceso), regresa None.
+
+    Recorre el barrido llamando a pose_juntas() para cada pose, de modo que la
+    cinematica usada para optimizar es exactamente la misma que dibuja el
+    diagrama de eslabones.
+    """
     PXifp, PYifp, PXifd, PYifd, TH_FM = [], [], [], [], []
     prev_theta_fm = None
 
     for th2 in th_input:
-        th1 = (th2 / gear_ratio) + theta_offset
-
-        # --- Mecanismo 1: 5 barras ---
-        res5 = sol_5_barras(Link4, Link3, r3_val, Link1, Link2, th1, th2)
-        if res5 is None:
-            return None
-        pxP, pyP = res5
-
-        # --- Mecanismo 1: 4 barras ---
-        theta4 = solve_four_bar(Link4, Link5, c1, Bancada2, th1, theta14B)
-        if theta4 is None:
+        est = pose_juntas(p, th2)
+        if est is None:
             return None
 
-        theta_fp = theta4 + np.arctan2(hsp, dsp)
-        px_ifp = FP_REAL * np.cos(theta_fp) - Bancada2 * np.cos(theta14B) - r3_val
-        py_ifp = FP_REAL * np.sin(theta_fp) - Bancada2 * np.sin(theta14B)
-
-        pxs1 = c1 * np.cos(theta4) - Bancada2 * np.cos(theta14B) - r3_val
-        pys1 = c1 * np.sin(theta4) - Bancada2 * np.sin(theta14B)
-
-        theta_ps2 = theta_fp - theta_aux_s2
-        pxs2 = rs2 * np.cos(theta_ps2) - Bancada2 * np.cos(theta14B) - r3_val
-        pys2 = rs2 * np.sin(theta_ps2) - Bancada2 * np.sin(theta14B)
-
-        pxm4 = Link4 * np.cos(th2) - r3_val
-        pym4 = Link4 * np.sin(th2)
-
-        # --- Mecanismo 2: 5 barras (referencia secundaria) ---
-        theta_roll = np.arctan2(pym4 - pys1, pxm4 - pxs1)
-        theta1m2 = np.arctan2(pys2 - pys1, pxs2 - pxs1) - theta_roll
-        theta2m2 = np.arctan2(pyP - pym4, pxP - pxm4) - theta_roll
-
-        res5_2 = sol_5_barras(FP_REAL - 2.0 * dsp, Link7, Link5 / 2.0, Link3, Link6,
-                              theta1m2, theta2m2)
-        if res5_2 is None:
-            return None
-        px_local, py_local = res5_2
-
-        mag = np.sqrt(px_local**2 + py_local**2)
-        theta_loc = np.arctan2(py_local, px_local)
-        px_aux = (pxs1 + pxm4) / 2.0
-        py_aux = (pys1 + pym4) / 2.0
-        pxP2 = mag * np.cos(theta_loc + theta_roll) + px_aux
-        pyP2 = mag * np.sin(theta_loc + theta_roll) + py_aux
-
-        # --- Mecanismo 2: 4 barras ---
-        theta1m42 = np.arctan2(pys2 - py_ifp, pxs2 - px_ifp)
-        theta2m42 = np.arctan2(pyP2 - pys2, pxP2 - pxs2)
-
-        theta4m2 = solve_four_bar(Link7, Link8, Link10, c1, theta2m42, theta1m42)
-        if theta4m2 is None:
-            return None
-
-        # Angulo de la falange medial (Link10/c2 + theta_aux_fm)
-        theta_fm = theta4m2 + theta_aux_fm
+        px_ifp, py_ifp = est['IFP']
+        px_ifd, py_ifd = est['IFD']
+        theta_fm = est['theta_fm']
 
         # Restriccion anti-gancho: theta_fm debe ser monotono creciente
         if prev_theta_fm is not None:
@@ -174,10 +232,6 @@ def run_kinematics(p, th_input):
             if delta_fm < -np.deg2rad(0.5):
                 return None  # se esta regresando, no sirve
         prev_theta_fm = theta_fm
-
-        # Posicion de la IFD (extremo de la falange medial)
-        px_ifd = FM_REAL * np.cos(theta_fm) + px_ifp
-        py_ifd = FM_REAL * np.sin(theta_fm) + py_ifp
 
         # Checamos que no truene (valores fuera de rango o NaN)
         if (np.abs(px_ifd) > 0.3 or np.abs(py_ifd) > 0.3
