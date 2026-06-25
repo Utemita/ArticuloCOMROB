@@ -8,6 +8,11 @@ mismas ecuaciones de CinematicaExoFinal.m / run_kinematics) usando las
 DIMENSIONES OPTIMIZADAS por Evolucion Diferencial, asi que el diagrama refleja
 la geometria que de verdad produce el mecanismo.
 
+Para que el dibujo sea legible y compacto en el articulo, el conjunto de puntos
+se rota rigidamente (no cambia ninguna longitud ni la cinematica) de modo que el
+dedo quede en orientacion horizontal, leyendose de izquierda (MCF) a derecha
+(IFD). El resultado es una figura apaisada que entra bien en una columna.
+
 Estilo: dibujo tecnico B/N. Eslabones = lineas delgadas; falanges = lineas
 gruesas; juntas de revoluta = circulos blancos con borde negro; soportes fijos
 (tierra) con achurado; c2 = linea de construccion punteada (no es eslabon
@@ -216,6 +221,36 @@ for th2_try in [40, 38, 42, 35, 45, 30, 48, 25, 50, 20, 55, 15, 60]:
 if est is None:
     raise RuntimeError("Ninguna pose intermedia ensambla con estos parametros.")
 
+
+# =============================================================================
+# 3b) ROTACION RIGIDA PARA ORIENTAR EL DEDO EN HORIZONTAL
+#     (no altera longitudes ni la cinematica; solo gira el dibujo completo)
+# =============================================================================
+def _rotacion(theta):
+    c_, s_ = np.cos(theta), np.sin(theta)
+    return np.array([[c_, -s_], [s_, c_]])
+
+
+_PT_KEYS = ["MCF", "G1", "G2", "T2", "P", "M4", "S1", "S2",
+            "IFP", "P2", "P3", "IFD"]
+
+# Giramos para que el eje MCF->IFD quede sobre el eje +x (dedo apuntando a la
+# derecha). Luego, si el mecanismo (bancada) queda por arriba, reflejamos en y
+# para que las falanges queden arriba y la bancada/soportes abajo (lectura mas
+# natural de un dibujo tecnico).
+_v = est["IFD"] - est["MCF"]
+_ang = -np.arctan2(_v[1], _v[0])
+_R = _rotacion(_ang)
+_origin = est["MCF"].copy()
+for k in _PT_KEYS:
+    est[k] = _R @ (est[k] - _origin) + _origin
+
+# Reflexion vertical si los soportes (G1/G2) quedaron por encima de la falange.
+if est["G1"][1] > est["IFP"][1]:
+    cy = est["MCF"][1]
+    for k in _PT_KEYS:
+        est[k][1] = 2 * cy - est[k][1]
+
 MCF, IFP, IFD = est["MCF"], est["IFP"], est["IFD"]
 P, P2, P3 = est["P"], est["P2"], est["P3"]
 S1, S2, M4 = est["S1"], est["S2"], est["M4"]
@@ -228,19 +263,16 @@ print(f"   |IFP-IFD| = {np.linalg.norm(IFD - IFP):.1f} mm (fm={fm})")
 
 
 # =============================================================================
-# 4) DIBUJO (estilo B/N de ingenieria)
+# 4) DIBUJO (estilo B/N de ingenieria, apaisado y compacto)
 # =============================================================================
-LW_LINK, LW_PHAL, LW_GROUND, R_JOINT = 1.6, 3.0, 1.6, 2.2
-FS_LINK, FS_PT = 15, 12
+LW_LINK, LW_PHAL, LW_GROUND, R_JOINT = 1.4, 2.6, 1.3, 2.0
+FS_LINK, FS_PT = 11, 9
 
-# El tamano de la figura lo calculamos despues de saber el rango real de
-# los puntos, asi mantenemos aspecto 1:1 sin que el dibujo quede como una
-# tira chiquita perdida en una hoja en blanco.
-pts_tmp = np.array([G1, G2, T2, P, M4, S1, S2, IFP, P2, P3, IFD, MCF])
-_w = pts_tmp[:, 0].max() - pts_tmp[:, 0].min()
-_h = pts_tmp[:, 1].max() - pts_tmp[:, 1].min()
-_aspect = (_w + 60) / (_h + 60)
-_fig_h = 9.0
+pts = np.array([G1, G2, T2, P, M4, S1, S2, IFP, P2, P3, IFD, MCF])
+_w = pts[:, 0].max() - pts[:, 0].min()
+_h = pts[:, 1].max() - pts[:, 1].min()
+_aspect = (_w + 40) / (_h + 40)
+_fig_h = 3.4
 fig, ax = plt.subplots(figsize=(_fig_h * _aspect, _fig_h))
 fig.patch.set_facecolor("white")
 ax.set_facecolor("white")
@@ -253,21 +285,32 @@ def link(p1, p2, lw=LW_LINK, ls="-", z=4):
 
 def joint(pt, r=R_JOINT, z=10):
     ax.add_patch(plt.Circle((pt[0], pt[1]), r, facecolor="white",
-                            edgecolor="black", linewidth=1.6, zorder=z))
+                            edgecolor="black", linewidth=1.3, zorder=z))
 
 
-def ground(pt, size=7):
+def ground(pt, size=6):
     """Soporte fijo (triangulo + achurado), apuntando hacia abajo."""
     base_y = pt[1] - size
     b1 = np.array([pt[0] - size * 0.7, base_y])
     b2 = np.array([pt[0] + size * 0.7, base_y])
-    link(pt, b1, lw=1.2, z=6)
-    link(pt, b2, lw=1.2, z=6)
-    ax.plot([b1[0], b2[0]], [b1[1], b2[1]], "k-", lw=1.2, zorder=6)
+    link(pt, b1, lw=1.0, z=6)
+    link(pt, b2, lw=1.0, z=6)
+    ax.plot([b1[0], b2[0]], [b1[1], b2[1]], "k-", lw=1.0, zorder=6)
     for t in np.linspace(0, 1, 6):
         hx = b1[0] + (b2[0] - b1[0]) * t
         ax.plot([hx, hx - size * 0.35], [base_y, base_y - size * 0.45],
-                "k-", lw=0.8, zorder=6)
+                "k-", lw=0.7, zorder=6)
+
+
+def mid(a, b):
+    return (np.asarray(a) + np.asarray(b)) / 2.0
+
+
+def perp_off(p1, p2, dist):
+    v = np.asarray(p2) - np.asarray(p1)
+    n = np.array([-v[1], v[0]])
+    n = n / (np.hypot(*n) + 1e-12)
+    return n * dist
 
 
 def lbl(p1, p2, text, dx=0.0, dy=0.0, fs=FS_LINK):
@@ -304,7 +347,7 @@ link(S2, P2)                                # L7
 
 # --- 2.o mecanismo de 4 barras ---
 link(P2, P3)                                # L8
-link(IFP, P3, ls=(0, (6, 4)), lw=1.2)       # c2 (linea de construccion)
+link(IFP, P3, ls=(0, (5, 3)), lw=1.0)       # c2 (linea de construccion)
 
 # --- Falanges (hueso del dedo) ---
 link(MCF, IFP, lw=LW_PHAL, z=3)             # Fp
@@ -315,70 +358,44 @@ for pt in [G1, G2, T2, P, M4, S1, S2, IFP, P2, P3, IFD, MCF]:
     joint(pt)
 
 # --- Soportes fijos ---
-ground(G1, size=7)
-ground(G2, size=7)
+ground(G1, size=6)
+ground(G2, size=6)
 
 
 # =============================================================================
-# 5) ETIQUETAS (al estilo de la figura de referencia)
+# 5) ETIQUETAS DE LOS PARAMETROS OPTIMIZADOS
 # =============================================================================
-def mid(a, b):
-    return (np.asarray(a) + np.asarray(b)) / 2.0
+off = 6.0
+lbl(G2, T2, r"$L_1$", *perp_off(G2, T2, off))
+lbl(T2, P, r"$L_2$", *perp_off(T2, P, off))
+lbl(M4, P, r"$L_3$", *perp_off(M4, P, off))
+lbl(G1, M4, r"$L_4$", *perp_off(G1, M4, off))
+lbl(M4, S1, r"$L_5$", *perp_off(M4, S1, -off))
+lbl(P, P2, r"$L_6$", *perp_off(P, P2, off))
+lbl(S2, P2, r"$L_7$", *perp_off(S2, P2, off))
+lbl(P2, P3, r"$L_8$", *perp_off(P2, P3, off))
+lbl(MCF, S1, r"$c$", *perp_off(MCF, S1, -off))
+lbl(IFP, P3, r"$c_2$", *perp_off(IFP, P3, off))
 
+# Bancadas
+lbl(G1, G2, r"$B_1$", *perp_off(G1, G2, -off))
+lbl(G1, MCF, r"$B_2$", *perp_off(G1, MCF, -off))
 
-def perp_off(p1, p2, dist):
-    v = np.asarray(p2) - np.asarray(p1)
-    n = np.array([-v[1], v[0]])
-    n = n / (np.hypot(*n) + 1e-12)
-    return n * dist
+# Soportes de la falange proximal
+lbl(S2, IFP, r"$h_{sp}$", *perp_off(S2, IFP, off))
+lbl_at(mid(MCF, S1), r"$d_{sp}$", dy=-5, fs=FS_PT)
 
+# Falanges
+lbl_at(mid(MCF, IFP), r"$F_p$", *perp_off(MCF, IFP, off + 2), fs=FS_LINK)
+lbl_at(mid(IFP, IFD), r"$F_m$", *perp_off(IFP, IFD, off + 2), fs=FS_LINK)
 
-# Eslabones
-lbl(G2, T2, r"$L_1$", dy=-7)
-lbl(T2, P, r"$L_2$", *perp_off(T2, P, 8))
-lbl(M4, P, r"$L_3$", *perp_off(M4, P, 8))
-lbl(G1, M4, r"$L_4$", dx=-7)
-lbl(M4, S1, r"$L_5$", *perp_off(M4, S1, -8))
-lbl(P, P2, r"$L_6$", *perp_off(P, P2, 8))
-lbl(S2, P2, r"$L_7$", *perp_off(S2, P2, 8))
-lbl(P2, P3, r"$L_8$", *perp_off(P2, P3, 8))
-lbl(MCF, S1, r"$c$", dx=-6)
-lbl(IFP, P3, r"$c_2$", *perp_off(IFP, P3, 7))
-
-# Bancadas y r3
-lbl(G1, G2, r"$B_1$", dy=6)
-lbl(G1, MCF, r"$B_2=d$", dx=-12)
-ax.annotate("", xy=G2, xytext=(0, 0),
-            arrowprops=dict(arrowstyle="<->", color="black", lw=1.0))
-ax.text((G1[0] + G2[0]) / 2, G1[1] + 11, r"$r_3$", fontsize=FS_PT,
-        style="italic", ha="center", va="bottom", zorder=20)
-
-# hsp / dsp (sobre la falange proximal)
-lbl_at(mid(MCF, IFP), r"$F_p$", dy=-9, fs=FS_LINK)
-lbl(S2, IFP, r"$h_{sp}$", *perp_off(S2, IFP, -10))
-lbl(MCF, S1, r"$d_{sp}$", dx=8, dy=-9, fs=FS_PT)
-
-# theta_aux_fm (entre c2 y la falange medial)
-lbl_at(IFP, r"$\theta_{aux_{fm}}$", dx=10, dy=10, fs=FS_PT)
-
-# Falange medial
-lbl_at(mid(IFP, IFD), r"$F_m$", *perp_off(IFP, IFD, -10), fs=FS_LINK)
-
-# Angulos iniciales de entrada (cerca de las bancadas)
-ax.annotate(r"$\theta_{1_{inicial}}$", xy=G1, xytext=(G1[0] + 18, G1[1] + 24),
-            fontsize=FS_PT, style="italic",
-            arrowprops=dict(arrowstyle="->", color="black", lw=0.9))
-ax.annotate(r"$\theta_{2_{inicial}}$", xy=G2, xytext=(G2[0] + 22, G2[1] + 14),
-            fontsize=FS_PT, style="italic",
-            arrowprops=dict(arrowstyle="->", color="black", lw=0.9))
-ax.annotate(r"$\theta_{1m4B_{inicial}}$", xy=MCF, xytext=(MCF[0] + 22, MCF[1] + 16),
-            fontsize=FS_PT, style="italic",
-            arrowprops=dict(arrowstyle="->", color="black", lw=0.9))
+# Angulo auxiliar de la falange medial (entre c2 y Fm, en IFP)
+lbl_at(IFP, r"$\theta_{aux_{fm}}$", dx=8, dy=8, fs=FS_PT)
 
 # Articulaciones del dedo
-lbl_at(MCF, "MCF", dx=-4, dy=-10, ha="right", fs=11)
-lbl_at(IFP, "IFP", dx=-4, dy=10, ha="right", fs=11)
-lbl_at(IFD, "IFD", dx=6, dy=-2, ha="left", fs=11)
+lbl_at(MCF, "MCF", dx=-3, dy=-9, ha="right", fs=9)
+lbl_at(IFP, "IFP", dx=0, dy=10, ha="center", fs=9)
+lbl_at(IFD, "IFD", dx=5, dy=4, ha="left", fs=9)
 
 
 # =============================================================================
@@ -387,12 +404,11 @@ lbl_at(IFD, "IFD", dx=6, dy=-2, ha="left", fs=11)
 ax.set_aspect("equal", adjustable="datalim")
 ax.axis("off")
 
-pts = np.array([G1, G2, T2, P, M4, S1, S2, IFP, P2, P3, IFD, MCF])
-mxr, myr = 22, 20
+mxr, myr = 16, 16
 ax.set_xlim(pts[:, 0].min() - mxr, pts[:, 0].max() + mxr)
 ax.set_ylim(pts[:, 1].min() - myr, pts[:, 1].max() + myr)
 
 out = os.path.join(HERE, "resultados", "diagrama_modelo_simplificado.png")
-plt.savefig(out, dpi=200, bbox_inches="tight", facecolor="white", pad_inches=0.15)
+plt.savefig(out, dpi=200, bbox_inches="tight", facecolor="white", pad_inches=0.08)
 plt.close()
 print(">> Diagrama guardado en:", out)

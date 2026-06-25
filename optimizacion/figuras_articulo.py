@@ -99,13 +99,12 @@ def fig_dimensiones():
 
 
 def fig_errores():
-    # Errores (mm)
+    # Errores (mm) -> grafico unico de barras (sin panel de presupuesto)
     ed_err = [2.1523, 2.6564, 1.6482]   # global, ifp, ifd
     ga_err = [5.5486, 3.9250, 7.1721]
     cats = ["Global", "IFP", "IFD"]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5),
-                                   gridspec_kw={"width_ratios": [1.4, 1.0]})
+    fig, ax1 = plt.subplots(figsize=(6.2, 4.0))
 
     x = np.arange(len(cats))
     w = 0.36
@@ -113,39 +112,14 @@ def fig_errores():
                  color="#1f77b4", edgecolor="black", linewidth=0.5)
     b2 = ax1.bar(x + w / 2, ga_err, w, label="Algoritmo Genetico",
                  color="#ff7f0e", edgecolor="black", linewidth=0.5)
-    ax1.bar_label(b1, fmt="%.2f", fontsize=9, padding=2)
-    ax1.bar_label(b2, fmt="%.2f", fontsize=9, padding=2)
+    ax1.bar_label(b1, fmt="%.2f", fontsize=10, padding=2)
+    ax1.bar_label(b2, fmt="%.2f", fontsize=10, padding=2)
     ax1.set_xticks(x)
-    ax1.set_xticklabels(cats, fontsize=11)
-    ax1.set_ylabel("Error de forma (Chamfer) [mm]", fontsize=10)
-    ax1.set_title("(a) Error de ajuste por articulacion", fontsize=11,
-                  fontweight="bold")
-    ax1.legend(fontsize=9)
+    ax1.set_xticklabels(cats, fontsize=12)
+    ax1.set_ylabel("Error de forma (Chamfer) [mm]", fontsize=11)
+    ax1.legend(fontsize=10)
     ax1.grid(True, axis="y", ls=":", alpha=0.6)
     ax1.set_ylim(0, 8.2)
-
-    # Panel de presupuesto: evaluaciones (miles) y tiempo (s)
-    metodos = ["ED", "AG"]
-    nfev = [72.597, 20.470]   # en miles
-    tiempo = [41.0, 95.9]     # s
-    xb = np.arange(len(metodos))
-    axb = ax2
-    bb = axb.bar(xb - 0.2, nfev, 0.38, color="#2ca02c", edgecolor="black",
-                 linewidth=0.5, label="Evaluaciones (x1000)")
-    axb.set_ylabel("Evaluaciones de la funcion objetivo (x1000)",
-                   color="#2ca02c", fontsize=9)
-    axb.tick_params(axis="y", labelcolor="#2ca02c")
-    axb.set_xticks(xb)
-    axb.set_xticklabels(metodos, fontsize=11)
-    axb.bar_label(bb, fmt="%.1f k", fontsize=9, padding=2)
-
-    axt = axb.twinx()
-    bt = axt.bar(xb + 0.2, tiempo, 0.38, color="#d62728", edgecolor="black",
-                 linewidth=0.5, label="Tiempo (s)")
-    axt.set_ylabel("Tiempo de computo [s]", color="#d62728", fontsize=9)
-    axt.tick_params(axis="y", labelcolor="#d62728")
-    axt.bar_label(bt, fmt="%.0f s", fontsize=9, padding=2)
-    ax2.set_title("(b) Presupuesto de computo", fontsize=11, fontweight="bold")
 
     plt.tight_layout()
     out = os.path.join(OUT, "comparacion_errores.png")
