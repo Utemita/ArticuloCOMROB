@@ -1,0 +1,43 @@
+\section{Introducción}
+Los exoesqueletos de mano son dispositivos robóticos de asistencia y
+rehabilitación cuya función es acompañar o restituir el movimiento de los dedos.
+Para que la asistencia sea cómoda y segura, el mecanismo debe reproducir con
+fidelidad las trayectorias articulares naturales del dedo a lo largo de todo el
+rango de flexión. Lograrlo depende en gran medida de elegir correctamente las
+dimensiones de los eslabones del mecanismo, un problema conocido como
+\emph{síntesis dimensional}.
+
+La síntesis dimensional de mecanismos para generación de trayectoria es un
+problema de optimización no lineal, multimodal y fuertemente restringido: el
+espacio de soluciones contiene amplias regiones donde el mecanismo
+simplemente no ensambla o invierte su movimiento, y la relación entre las
+longitudes y la curva resultante es altamente no convexa. Estas
+características dificultan el uso de métodos clásicos basados en gradiente y
+motivan el empleo de metaheurísticas poblacionales como la Evolución
+Diferencial (ED) y los Algoritmos Genéticos (AG).
+
+Aunque ambas familias se usan ampliamente, su desempeño relativo depende de la
+naturaleza del problema, de la codificación y del ajuste de hiperparámetros. La
+elección entre una u otra rara vez es obvia y suele requerir evidencia empírica
+sobre la instancia concreta. En este trabajo abordamos esa pregunta para un
+mecanismo de exoesqueleto de dedo real, formulando una comparación controlada
+en la que ambos algoritmos comparten exactamente el mismo planteamiento,
+función objetivo y presupuesto de generaciones.
+
+Para que la comparación sea robusta y reproducible, se optimiza una versión
+\emph{parcial} del mecanismo, que reproduce el movimiento hasta la falange
+medial (articulación IFD). Esta instancia es más pequeña que el modelo completo
+de tres falanges, pero conserva las dificultades esenciales del problema
+(acoplamiento de etapas, restricciones de ensamble y monotonicidad), lo que la
+hace idónea para aislar el efecto del algoritmo.
+
+\subsection{Contribuciones}
+Las contribuciones de este artículo son: (i) una formulación unificada del
+problema de síntesis dimensional parcial con 16 parámetros, función objetivo
+basada en distancia de Chamfer ponderada y penalizaciones de viabilidad;
+(ii) una comparación controlada de ED y AG bajo condiciones idénticas, evaluando
+no sólo el error de ajuste sino también la coherencia y compacidad del
+mecanismo resultante; y (iii) un análisis de las razones por las que la ED
+supera al AG en este dominio continuo. El modelo cinemático y el diseño del
+mecanismo empleados como base fueron desarrollados por Pavel Palma Nicolás, ex
+alumno de la universidad de los autores.

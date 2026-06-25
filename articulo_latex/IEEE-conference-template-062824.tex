@@ -1,0 +1,359 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% ===== Codificacion e idioma =====
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot,es-tabla]{babel}
+
+% ===== Paquetes =====
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+
+\graphicspath{{figs/}{./}}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Estudio comparativo de Evolución Diferencial y Algoritmos Genéticos para la síntesis cinemática parcial de un mecanismo de exoesqueleto de dedo}
+
+\author{\IEEEauthorblockN{Adriana Elorza Ramos}
+\IEEEauthorblockA{\textit{Departamento de Ingeniería Mecatrónica} \\
+\textit{Universidad}\\
+Ciudad, País \\
+adriana.elorza@correo.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+La síntesis dimensional de mecanismos para exoesqueletos de mano es un problema
+de optimización no lineal, multimodal y fuertemente restringido, donde las
+longitudes de los eslabones deben reproducir trayectorias articulares
+fisiológicas. Este trabajo compara dos metaheurísticas ampliamente usadas
+---Evolución Diferencial (ED) y Algoritmo Genético (AG)--- aplicadas a la
+síntesis cinemática \emph{parcial} de un mecanismo de exoesqueleto de dedo, es
+decir, optimizando únicamente hasta la falange medial (articulación
+interfalángica distal, IFD). El problema se plantea con 16 parámetros de diseño
+y una función objetivo basada en la distancia de Chamfer ponderada respecto a
+120 puntos de captura de movimiento (MOCAP) de un agarre de pinza fina, más
+penalizaciones de monotonicidad y regularización suave de dimensiones. Bajo
+condiciones idénticas de planteamiento, semilla y presupuesto de generaciones,
+la ED alcanzó un error global de 2.15~mm frente a 5.55~mm del AG, además de
+producir un mecanismo más compacto (suma de eslabones de 326.6~mm contra
+358.7~mm). Se analiza por qué la ED domina en este espacio continuo: su esquema
+de mutación diferencial autoescalada explora y explota mejor el dominio
+continuo, mientras que el AG mostró convergencia prematura. Los resultados
+sugieren que la ED es preferible para esta clase de síntesis dimensional.
+\end{abstract}
+
+\begin{IEEEkeywords}
+evolución diferencial, algoritmo genético, síntesis cinemática, exoesqueleto de
+mano, optimización dimensional, mecanismo de cuatro barras.
+\end{IEEEkeywords}
+
+\input{Introduction}
+
+\section{Trabajo relacionado}
+La síntesis dimensional de eslabonamientos para generación de trayectorias ha
+sido abordada históricamente con métodos analíticos y, más recientemente, con
+metaheurísticas que evitan las limitaciones de los enfoques basados en
+gradiente sobre funciones no convexas y discontinuas
+\cite{ref_de_fourbar,ref_tlbo}. En particular, los mecanismos de cuatro barras
+son un bloque de construcción recurrente tanto en síntesis de trayectoria como
+en exoesqueletos de dedo, por su simplicidad y su capacidad de aproximar curvas
+de acoplador complejas \cite{ref_fourbar_nat,ref_exo_stephenson}.
+
+En el ámbito de los exoesqueletos de mano, varios trabajos recientes emplean
+optimización basada en enjambres o evolutiva para sintonizar las dimensiones de
+mecanismos que reproducen la flexión natural de los dedos
+\cite{ref_exo_stephenson,ref_exo_review}. La comparación directa entre familias
+de algoritmos también ha sido estudiada: en problemas de dominio continuo, la
+ED y la optimización por enjambre de partículas tienden a comportarse de forma
+más natural que el AG, el cual fue concebido originalmente para
+representaciones discretas \cite{ref_ga_pso_de,ref_de_vs_ga}. No obstante, el
+desempeño relativo depende fuertemente de la codificación del problema, los
+operadores y el ajuste de hiperparámetros, por lo que sigue siendo relevante
+caracterizar el comportamiento sobre instancias concretas
+\cite{ref_de_survey,ref_de_sade}.
+
+Este trabajo se diferencia en que fija un \emph{mismo} planteamiento, función
+objetivo y presupuesto computacional para ambos algoritmos sobre un mecanismo
+de exoesqueleto real, y analiza no sólo el error de ajuste sino también la
+coherencia y compacidad del mecanismo resultante.
+
+\section{Modelo cinemático del exoesqueleto}
+El modelo cinemático y el diseño del mecanismo del exoesqueleto fueron
+desarrollados por Pavel Palma Nicolás, ex alumno de la universidad de los
+autores; este trabajo se centra exclusivamente en la optimización dimensional
+del mismo y reconoce dicha contribución de diseño.
+
+El mecanismo reproduce la flexión del dedo mediante una cadena de etapas
+acopladas accionadas por una única manivela de entrada. La primera etapa
+combina un mecanismo de cinco barras y uno de cuatro barras que gobiernan el
+movimiento desde la articulación metacarpofalángica (MCF) hasta la falange
+proximal (articulación interfalángica proximal, IFP). La segunda etapa repite
+el patrón de cinco barras más cuatro barras para llevar el movimiento desde la
+IFP hasta la falange medial (articulación IFD). El modelo \emph{completo}
+incorpora además una tercera etapa de cuatro barras que ubica la falange distal
+(articulación interfalángica distal de la punta, DIP); en este estudio se
+emplea el modelo \emph{simplificado}, que se detiene en la falange medial. Esta
+elección reduce el problema a una instancia más pequeña pero representativa,
+ideal para comparar de manera justa el comportamiento de ED y AG.
+
+Las longitudes de las falanges se consideran fijas y antropométricas:
+falange proximal $L_{FP}=49$~mm, falange medial $L_{FM}=26$~mm y falange distal
+$L_{FD}=24$~mm (esta última sólo en el modelo completo). Dada una posición de
+manivela $\theta_2$, la entrada de la primera etapa se obtiene mediante una
+relación de engranaje $r_g$ y un desfase $\theta_{\text{off}}$ como
+$\theta_1=\theta_2/r_g+\theta_{\text{off}}$. La cinemática directa resuelve de
+forma secuencial los lazos de cinco y cuatro barras, propagando las posiciones
+de la IFP y la IFD a lo largo de todo el barrido de la manivela. Cuando alguna
+pose no ensambla, produce valores no finitos o genera un retroceso de la
+falange medial (no monotonicidad del ángulo $\theta_{FM}$), la configuración se
+marca como inviable. La Fig.~\ref{fig:diagrama} muestra el diagrama de
+eslabones con las etiquetas de los parámetros optimizados, dibujado con la
+cinemática real evaluada sobre la solución de la ED.
+
+\begin{figure*}[t]
+\centerline{\includegraphics[width=0.92\textwidth]{diagrama_modelo_simplificado.png}}
+\caption{Diagrama de eslabones del modelo simplificado, generado con la
+cinemática real (\textit{run\_kinematics}) usando las dimensiones óptimas de la
+ED. Se etiquetan los parámetros de diseño (bancadas, eslabones $L_1$--$L_8$,
+$c_2$, $h_{sp}$ y $d_{sp}$). Las longitudes de falange son fijas:
+$|\text{MCF--IFP}|=49$~mm y $|\text{IFP--IFD}|=26$~mm.}
+\label{fig:diagrama}
+\end{figure*}
+
+\section{Formulación del problema de optimización}
+\subsection{Variables de diseño}
+El vector de diseño $\mathbf{p}\in\mathbb{R}^{16}$ agrupa dos bancadas, ocho
+eslabones $L_1$--$L_8$, el eslabón $c_2$ (Link10), los desplazamientos del
+soporte $h_{sp}$ y $d_{sp}$, el ángulo auxiliar de la falange medial
+$\theta_{aux}^{FM}$, la relación de engranaje $r_g$ y el desfase angular
+$\theta_{\text{off}}$. La Tabla~\ref{tab:bounds} resume los límites de búsqueda.
+Las longitudes de eslabón se acotaron a 60~mm como máximo para favorecer un
+mecanismo compacto y fabricable, y el ángulo auxiliar se limitó a $70^\circ$.
+
+\begin{table}[htbp]
+\caption{Variables de diseño y límites de búsqueda}
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{l c c}
+\toprule
+\textbf{Parámetro} & \textbf{Mín.} & \textbf{Máx.} \\
+\midrule
+Bancada1, Bancada2 (m) & 0.015 & 0.060 \\
+$L_1$--$L_8$ (m)        & 0.010 & 0.060 \\
+$c_2$ / Link10 (m)      & 0.010 & 0.055 \\
+$h_{sp}$ (m)            & 0.005 & 0.030 \\
+$d_{sp}$ (m)            & 0.005 & 0.023 \\
+$\theta_{aux}^{FM}$ (deg) & 0 & 70 \\
+$r_g$ (relación engranaje) & 1.0 & 8.0 \\
+$\theta_{\text{off}}$ (rad) & $-\pi$ & $\pi$ \\
+\bottomrule
+\end{tabular}
+\label{tab:bounds}
+\end{center}
+\end{table}
+
+\subsection{Función objetivo}
+El ajuste se mide con la distancia de Chamfer simétrica entre la nube de puntos
+MOCAP $M$ y la trayectoria simulada $S$. Antes de evaluar el error, la
+trayectoria simulada se alinea de forma rígida (rotación $R$ y traslación
+$\mathbf{t}$) con los datos mediante una solución de Procrustes, de modo que el
+error refleje la forma de la curva y no su colocación absoluta:
+\begin{equation}
+d_C(M,S)=\frac{1}{|M|}\!\sum_{\mathbf{m}\in M}\!\min_{\mathbf{s}\in S}\lVert \mathbf{m}-\mathbf{s}\rVert
++\frac{1}{|S|}\!\sum_{\mathbf{s}\in S}\!\min_{\mathbf{m}\in M}\lVert \mathbf{s}-\mathbf{m}\rVert .
+\label{eq:chamfer}
+\end{equation}
+
+La función objetivo combina el error de forma de las dos trayectorias (IFP e
+IFD), una penalización de monotonicidad $P_{\text{mono}}$ sobre la IFD para
+evitar retrocesos, y dos términos de regularización suave que empujan hacia
+dimensiones y ángulo auxiliar pequeños sin degradar el ajuste:
+\begin{align}
+f(\mathbf{p}) =\;& w_{IFP}\,d_C(M_{IFP},S_{IFP}) + w_{IFD}\,d_C(M_{IFD},S_{IFD}) \nonumber\\
+& + w_{m}\,P_{\text{mono}}(S_{IFD}) + w_{d}\!\sum_{i=1}^{11}\!L_i + w_{a}\frac{\theta_{aux}^{FM}}{\pi}.
+\label{eq:obj}
+\end{align}
+Los pesos son $w_{IFP}=0.40$, $w_{IFD}=0.60$, $w_{m}=5.0$ y
+$w_{d}=w_{a}=5\times10^{-4}$. Las configuraciones inviables reciben una
+penalización fija de $1000$. \emph{El planteamiento, los límites y la función
+objetivo son idénticos para la ED y el AG}, de modo que la comparación mide el
+algoritmo y no el planteamiento.
+
+\section{Algoritmos de optimización}
+Ambos algoritmos usaron la misma semilla aleatoria (42) y el mismo número
+máximo de generaciones (300) para una comparación controlada. La
+Tabla~\ref{tab:config} resume los hiperparámetros.
+
+\subsection{Evolución Diferencial (ED)}
+Se empleó la implementación \texttt{differential\_evolution} de SciPy con la
+estrategia \texttt{best1bin}, tamaño de población relativo $\text{popsize}=15$,
+factor de mutación diferencial con \emph{dithering} en el rango
+$[0.5,1.0]$, recombinación $0.7$, tolerancia $10^{-7}$ y evaluación en
+paralelo. La mutación diferencial escala automáticamente sus pasos con la
+dispersión de la población, lo que favorece la exploración temprana y la
+explotación fina cerca de la convergencia.
+
+\subsection{Algoritmo Genético (AG)}
+Se implementó un AG real codificado con selección por torneo (tamaño 3), cruza
+binaria simulada (SBX, $\eta_c=15$), mutación polinomial ($\eta_m=20$),
+población de 70 individuos, probabilidad de cruza $0.9$, probabilidad de
+mutación $0.15$ y elitismo de 2 individuos. Se aplicó un criterio de paro
+temprano por estancamiento (paciencia de 100 generaciones).
+
+\begin{table}[htbp]
+\caption{Configuración de los algoritmos}
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{l l}
+\toprule
+\textbf{Evolución Diferencial} & \textbf{Algoritmo Genético} \\
+\midrule
+estrategia: best1bin & selección: torneo (3) \\
+popsize: 15 & población: 70 \\
+mutación: $(0.5,1.0)$ & cruza: SBX ($\eta_c=15$) \\
+recombinación: 0.7 & mutación: polinomial ($\eta_m=20$) \\
+maxiter: 300 & generaciones: 300 \\
+tol: $10^{-7}$ & $p_{cx}=0.9$, $p_{mut}=0.15$ \\
+semilla: 42 & élite: 2, paciencia: 100 \\
+\bottomrule
+\end{tabular}
+\label{tab:config}
+\end{center}
+\end{table}
+
+\section{Resultados}
+La Tabla~\ref{tab:resultados} reúne las métricas de ambas corridas. La ED
+obtuvo un error global de 2.15~mm, sensiblemente menor que los 5.55~mm del AG,
+con mejoras tanto en la IFP como, sobre todo, en la IFD (1.65~mm contra
+7.17~mm). La Fig.~\ref{fig:errores} ilustra esta diferencia.
+
+\begin{table}[htbp]
+\caption{Resultados de la optimización (modelo simplificado)}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l c c}
+\toprule
+\textbf{Métrica} & \textbf{ED} & \textbf{AG} \\
+\midrule
+Error global (mm)      & \textbf{2.1523} & 5.5486 \\
+Error IFP (mm)         & 2.6564 & 3.9250 \\
+Error IFD (mm)         & \textbf{1.6482} & 7.1721 \\
+Fitness                & \textbf{0.002366} & 0.006191 \\
+Evaluaciones (nfev)    & 72\,597 & 20\,470 \\
+Tiempo (s)             & 41.0 & 95.9 \\
+$\sum$ 11 eslabones (mm) & \textbf{326.6} & 358.7 \\
+\bottomrule
+\end{tabular}
+\label{tab:resultados}
+\end{center}
+\end{table}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\columnwidth]{comparacion_errores.png}}
+\caption{Comparación de errores. (a) Error de Chamfer global, IFP e IFD para ED
+y AG. (b) Esfuerzo de cómputo: número de evaluaciones de la función objetivo
+(nfev) y tiempo de ejecución.}
+\label{fig:errores}
+\end{figure}
+
+\subsection{Coherencia de las dimensiones}
+La Fig.~\ref{fig:dimensiones} compara, eslabón por eslabón, las dimensiones del
+diseño CAD de referencia frente a las optimizadas por ED y AG. Las longitudes
+obtenidas por la ED son coherentes y compactas: la suma de los once eslabones
+es de 326.6~mm para la ED, 358.7~mm para el AG y aproximadamente 380~mm para el
+diseño CAD base. Es decir, la ED no sólo ajusta mejor las trayectorias sino que
+además entrega el mecanismo más compacto de los tres, lo cual es deseable para
+su fabricación y portabilidad.
+
+\begin{figure*}[t]
+\centerline{\includegraphics[width=0.92\textwidth]{comparacion_dimensiones.png}}
+\caption{Dimensiones de los eslabones: diseño CAD base (Pavel Palma Nicolás)
+frente a las soluciones óptimas de ED y AG, en milímetros. La ED produce el
+mecanismo más compacto manteniendo el menor error.}
+\label{fig:dimensiones}
+\end{figure*}
+
+\subsection{Biofidelidad y convergencia}
+La Fig.~\ref{fig:biofidelidad} muestra la superposición de las trayectorias
+simuladas por la ED contra los puntos MOCAP, evidenciando un buen seguimiento
+de la forma fisiológica en IFP e IFD. La Fig.~\ref{fig:convergencia} presenta
+las curvas de convergencia: la ED desciende de forma sostenida hasta un mejor
+óptimo, mientras que el AG se estanca tempranamente y activa el paro por
+paciencia, señal de convergencia prematura.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\columnwidth]{biofidelidad_simplificado_ED.png}}
+\caption{Biofidelidad de la solución de la ED: trayectorias simuladas (IFP e
+IFD) superpuestas a los 120 puntos MOCAP del agarre de pinza fina.}
+\label{fig:biofidelidad}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\columnwidth]{comparacion_convergencia.png}}
+\caption{Curvas de convergencia de ED y AG. La ED alcanza un mejor valor de la
+función objetivo; el AG se estanca y dispara el paro temprano.}
+\label{fig:convergencia}
+\end{figure}
+
+\section{Discusión: por qué la ED supera al AG en este caso}
+El espacio de diseño de la síntesis dimensional es \emph{continuo} y altamente
+multimodal, con amplias regiones inviables (no ensamble o retroceso de la
+falange medial). En este contexto, la mutación diferencial de la ED genera
+vectores de perturbación a partir de las diferencias entre individuos de la
+propia población: cuando la población está dispersa, los pasos son grandes
+(exploración) y, conforme converge, los pasos se reducen automáticamente
+(explotación). Este escalado autoadaptativo encaja de forma natural con
+variables reales y con la geometría del dominio
+\cite{ref_de_survey,ref_ga_pso_de}.
+
+El AG real codificado, en cambio, depende de la cruza SBX y la mutación
+polinomial con parámetros de distribución fijos ($\eta_c$, $\eta_m$); aunque
+son operadores adecuados para variables continuas, su capacidad de
+auto\-escalado es menor y resultan más sensibles al ajuste y a la pérdida de
+diversidad. En la corrida realizada, el AG mostró convergencia prematura y
+activó el paro por estancamiento, quedando atrapado en una solución de mayor
+error (7.17~mm en la IFD), consistente con lo reportado en comparaciones
+previas donde la ED domina a los AG en problemas continuos
+\cite{ref_de_vs_ga,ref_ga_pso_de}.
+
+Es importante señalar una limitación metodológica: la comparación de tiempos de
+ejecución está sesgada, pues la ED se evaluó con una implementación vectorizada
+y en paralelo, mientras que el AG corrió en Python puro. Por ello, enfatizamos
+la \emph{calidad de la solución} y el número de evaluaciones de la función
+(nfev) como métrica de cómputo más justa que el tiempo absoluto. Aun así, la ED
+alcanzó un menor error pese a un mayor nfev, lo que indica que su ventaja
+proviene de una búsqueda más efectiva y no únicamente de un mayor presupuesto.
+
+\section{Conclusión}
+Se comparó la Evolución Diferencial y un Algoritmo Genético real codificado en
+la síntesis dimensional parcial (hasta la falange medial) de un mecanismo de
+exoesqueleto de dedo, bajo un planteamiento, función objetivo y presupuesto
+idénticos. La ED obtuvo un error global de 2.15~mm frente a 5.55~mm del AG y, de
+manera notable, entregó el mecanismo más compacto (326.6~mm de suma de
+eslabones). El análisis sugiere que, para esta clase de problemas continuos y
+multimodales, la mutación diferencial autoescalada de la ED ofrece una ventaja
+estructural sobre los operadores de distribución fija del AG, que aquí mostró
+convergencia prematura. Como trabajo futuro se contempla extender la
+optimización al modelo completo de tres falanges (incluida la falange distal),
+incorporar comparaciones estadísticas multi\-semilla y validar físicamente el
+mecanismo óptimo.
+
+\section*{Agradecimientos}
+Los autores agradecen a Pavel Palma Nicolás por el diseño del mecanismo y el
+desarrollo del modelo cinemático del exoesqueleto que sirvieron de base para
+este estudio de optimización.
+
+\input{references}
+\end{document}
