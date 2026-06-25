@@ -78,9 +78,14 @@ _origin = est["MCF"].copy()
 for k in _PT_KEYS:
     est[k] = _R @ (est[k] - _origin) + _origin
 
-# Si la bancada/soportes (G1/G2) quedaron por encima de la falange, aplicamos una
-# ROTACION rigida de 180 grados (NO una reflexion) para dejar los soportes abajo.
-if est["G1"][1] > est["IFP"][1]:
+# Si la cadena de eslabones (el mecanismo) quedo POR DEBAJO de las falanges,
+# aplicamos una ROTACION rigida de 180 grados (NO una reflexion) para que la
+# cadena quede POR ARRIBA del dorso del dedo, como en el dispositivo real.
+# Reflejar invertiria la quiralidad del mecanismo, por eso NO se usa.
+_finger_y = np.mean([est["MCF"][1], est["IFP"][1], est["IFD"][1]])
+_chain_y = np.mean([est[k][1] for k in
+                    ["G1", "G2", "T2", "P", "M4", "S1", "S2", "P2", "P3"]])
+if _chain_y < _finger_y:
     _R180 = _rotacion(np.pi)
     for k in _PT_KEYS:
         est[k] = _R180 @ (est[k] - _origin) + _origin
