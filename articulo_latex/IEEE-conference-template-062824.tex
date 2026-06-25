@@ -140,23 +140,24 @@ forma secuencial los lazos de cinco y cuatro barras y propaga las posiciones de
 la IFP y la IFD a lo largo de todo el barrido de la manivela. Cuando una
 configuración no ensambla, produce valores no finitos o genera un retroceso de
 la falange medial (no monotonicidad del ángulo de la IFD), la pose se marca como
-inviable y se descarta. La Fig.~\ref{fig:diagrama} muestra un esquema del
-mecanismo completo del exoesqueleto, en el que la cadena de eslabones se sitúa
-sobre el dorso del dedo y se etiquetan los parámetros de diseño; el estudio de
-optimización emplea su versión simplificada, que se detiene en la falange medial.
+inviable y se descarta. La Fig.~\ref{fig:diagrama} muestra el esquema cinemático
+del mecanismo simplificado del exoesqueleto en una pose intermedia del recorrido:
+la cadena de eslabones se sitúa sobre el dorso del dedo y se etiquetan los
+parámetros de diseño. Las posiciones de las juntas provienen de la misma
+cinemática directa que evalúa el optimizador, de modo que el dibujo refleja el
+mecanismo realmente optimizado.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{diagrama_modelo_simplificado.pdf}}
-\caption{Esquema del mecanismo completo del exoesqueleto. La cadena de eslabones
-$L_1$--$L_{10}$ se ubica sobre el dorso del dedo, mientras que las falanges
-proximal $F_p$, medial $F_m$ y distal $F_d$ forman la línea inferior. Se indican
-las bancadas $B_1$ y $B_2=d$, los balancines $c_2$, las cotas $r_3$, $h_{sp}$ y
-$d_{sp}$, y los ángulos de entrada $\theta_{1_{inicial}}$,
-$\theta_{2_{inicial}}$ y $\theta_{1m4B_{inicial}}$. Los ángulos
-$\theta_{aux_{fm}}$ y $\theta_{aux_{fd}}$ orientan las falanges medial y distal
-respecto a los balancines de sus etapas. El modelo simplificado empleado en este
-trabajo corresponde a esta misma cadena hasta la falange medial ($L_1$--$L_8$).
-El esquema es ilustrativo y no está dibujado a escala.}
+\caption{Esquema cinemático del mecanismo simplificado del exoesqueleto en una
+pose intermedia. Las falanges proximal $F_p$ y medial $F_m$ forman la línea del
+dedo (articulaciones MCF, IFP e IFD), mientras que la cadena de eslabones
+$L_1$--$L_8$ se ubica sobre el dorso. Se indican las bancadas $B_1$ y $B_2$, los
+balancines $c$ y $c_2$, los desplazamientos del soporte $h_{sp}$ y $d_{sp}$, y el
+ángulo auxiliar $\theta_{aux_{fm}}$ que orienta la falange medial respecto al
+balancín $c_2$. Las juntas de revoluta se dibujan como círculos blancos y los
+apoyos fijos con achurado. El modelo se detiene en la falange medial; el tercer
+mecanismo de cuatro barras y la falange distal no forman parte de esta versión.}
 \label{fig:diagrama}
 \end{figure}
 \FloatBarrier
