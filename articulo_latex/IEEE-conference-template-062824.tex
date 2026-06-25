@@ -141,19 +141,22 @@ la IFP y la IFD a lo largo de todo el barrido de la manivela. Cuando una
 configuración no ensambla, produce valores no finitos o genera un retroceso de
 la falange medial (no monotonicidad del ángulo de la IFD), la pose se marca como
 inviable y se descarta. La Fig.~\ref{fig:diagrama} muestra un esquema del
-mecanismo del modelo simplificado, en el que la cadena de eslabones se sitúa
-sobre el dorso del dedo y se etiquetan los parámetros de diseño.
+mecanismo completo del exoesqueleto, en el que la cadena de eslabones se sitúa
+sobre el dorso del dedo y se etiquetan los parámetros de diseño; el estudio de
+optimización emplea su versión simplificada, que se detiene en la falange medial.
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{diagrama_modelo_simplificado.png}}
-\caption{Esquema del mecanismo del modelo simplificado. La cadena de eslabones
-$L_1$--$L_8$ se ubica sobre el dorso del dedo, mientras que las falanges proximal
-$F_p$ y medial $F_m$ forman la línea inferior. Se indican las bancadas $B_1$ y
-$B_2=d$, el balancín $c_2$, las cotas $r_3$, $h_{sp}$ y $d_{sp}$, y los ángulos
-de entrada $\theta_{1_{inicial}}$, $\theta_{2_{inicial}}$ y
-$\theta_{1m4B_{inicial}}$. El ángulo $\theta_{aux_{fm}}$ orienta la falange
-medial respecto al balancín de la segunda etapa. El esquema es ilustrativo y no
-está dibujado a escala.}
+\centerline{\includegraphics[width=\columnwidth]{diagrama_modelo_simplificado.pdf}}
+\caption{Esquema del mecanismo completo del exoesqueleto. La cadena de eslabones
+$L_1$--$L_{10}$ se ubica sobre el dorso del dedo, mientras que las falanges
+proximal $F_p$, medial $F_m$ y distal $F_d$ forman la línea inferior. Se indican
+las bancadas $B_1$ y $B_2=d$, los balancines $c_2$, las cotas $r_3$, $h_{sp}$ y
+$d_{sp}$, y los ángulos de entrada $\theta_{1_{inicial}}$,
+$\theta_{2_{inicial}}$ y $\theta_{1m4B_{inicial}}$. Los ángulos
+$\theta_{aux_{fm}}$ y $\theta_{aux_{fd}}$ orientan las falanges medial y distal
+respecto a los balancines de sus etapas. El modelo simplificado empleado en este
+trabajo corresponde a esta misma cadena hasta la falange medial ($L_1$--$L_8$).
+El esquema es ilustrativo y no está dibujado a escala.}
 \label{fig:diagrama}
 \end{figure}
 \FloatBarrier
