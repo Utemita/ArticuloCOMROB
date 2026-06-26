@@ -9,12 +9,10 @@
 % ===== Paquetes =====
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
-\usepackage{booktabs}
-\usepackage{array}
-\usepackage{placeins}
 
 \graphicspath{{figs/}{./}}
 
@@ -160,7 +158,6 @@ apoyos fijos con achurado. El modelo se detiene en la falange medial; el tercer
 mecanismo de cuatro barras y la falange distal no forman parte de esta versión.}
 \label{fig:diagrama}
 \end{figure}
-\FloatBarrier
 
 \section{Formulación del problema de optimización}
 \subsection{Variables de diseño}
@@ -176,20 +173,26 @@ auxiliar se limitó a $70^\circ$.
 \begin{table}[htbp]
 \caption{Variables de diseño y límites de búsqueda}
 \begin{center}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{l c c}
-\toprule
+\begin{tabular}{|l|c|c|}
+\hline
 \textbf{Parámetro} & \textbf{Mín.} & \textbf{Máx.} \\
-\midrule
+\hline
 $B_1$, $B_2$ (m) & 0.015 & 0.060 \\
+\hline
 $L_1$--$L_8$ (m)        & 0.010 & 0.060 \\
+\hline
 $c_2$ (m)      & 0.010 & 0.055 \\
+\hline
 $h_{sp}$ (m)            & 0.005 & 0.030 \\
+\hline
 $d_{sp}$ (m)            & 0.005 & 0.023 \\
+\hline
 $\theta_{aux}^{FM}$ (deg) & 0 & 70 \\
+\hline
 $r_g$ (relación de engranaje) & 1.0 & 8.0 \\
+\hline
 $\theta_{\text{off}}$ (rad) & $-\pi$ & $\pi$ \\
-\bottomrule
+\hline
 \end{tabular}
 \label{tab:bounds}
 \end{center}
@@ -279,26 +282,30 @@ la corrida reportada el AG siguió mejorando hasta una fase avanzada y agotó la
 \begin{table}[htbp]
 \caption{Configuración de los algoritmos (hiperparámetros sintonizados con Optuna)}
 \begin{center}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{l l}
-\toprule
+\begin{tabular}{|l|l|}
+\hline
 \textbf{Evolución Diferencial} & \textbf{Algoritmo Genético} \\
-\midrule
+\hline
 estrategia: best1bin & selección: torneo (3) \\
+\hline
 popsize: 28 & población: 52 \\
+\hline
 mutación: $(0.54,0.85)$ & cruza: SBX ($\eta_c=16$) \\
+\hline
 recombinación: 0.77 & mutación: polinomial ($\eta_m=14$) \\
+\hline
 maxiter: 300 & generaciones: 300 \\
+\hline
 tol: $10^{-7}$ & $p_{cx}=0.63$, $p_{mut}=0.22$ \\
+\hline
 semilla: 42 & élite: 2, tolerancia: 100 \\
-\midrule
-\multicolumn{2}{l}{Sintonización: Optuna (TPE), 25 ensayos por algoritmo, semilla 42} \\
-\bottomrule
+\hline
+\multicolumn{2}{|l|}{Sintonización: Optuna (TPE), 25 ensayos por algoritmo, semilla 42} \\
+\hline
 \end{tabular}
 \label{tab:config}
 \end{center}
 \end{table}
-\FloatBarrier
 
 \section{Resultados}
 \subsection{Error de ajuste}
@@ -315,18 +322,22 @@ mecanismo.
 \begin{table}[htbp]
 \caption{Resultados de la optimización (modelo simplificado)}
 \begin{center}
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{l c c}
-\toprule
+\begin{tabular}{|l|c|c|}
+\hline
 \textbf{Métrica} & \textbf{ED} & \textbf{AG} \\
-\midrule
+\hline
 Error global (mm)      & \textbf{2.1736} & 2.5543 \\
+\hline
 Error IFP (mm)         & \textbf{2.8156} & 3.6813 \\
+\hline
 Error IFD (mm)         & 1.5317 & \textbf{1.4273} \\
+\hline
 Fitness                & \textbf{0.002335} & 0.002720 \\
+\hline
 Evaluaciones (nfev)    & 135\,970 & 15\,052 \\
+\hline
 $\sum$ eslabones estructurales (mm) & \textbf{347.2} & 457.1 \\
-\bottomrule
+\hline
 \end{tabular}
 \label{tab:resultados}
 \end{center}
@@ -339,7 +350,6 @@ para la ED y el AG. La ED domina en el error global y en la IFP, mientras que el
 AG ajusta ligeramente mejor la IFD.}
 \label{fig:errores}
 \end{figure}
-\FloatBarrier
 
 \subsection{Coherencia de las dimensiones}
 La Tabla~\ref{tab:dimensiones} compara, eslabón por eslabón, las dimensiones del
@@ -359,32 +369,42 @@ el propio error de ajuste.
 \caption{Dimensiones de los eslabones (mm): diseño CAD base frente a las
 soluciones óptimas de ED y AG}
 \begin{center}
-\renewcommand{\arraystretch}{1.12}
-\begin{tabular}{l c c c}
-\toprule
+\begin{tabular}{|l|c|c|c|}
+\hline
 \textbf{Parámetro} & \textbf{CAD base} & \textbf{ED} & \textbf{AG} \\
-\midrule
+\hline
 $B_1$  & 18.00 & 37.33 & 39.19 \\
+\hline
 $B_2$  & 20.00 & 39.62 & 59.87 \\
+\hline
 $L_1$  & 35.00 & 16.00 & 31.84 \\
+\hline
 $L_2$  & 49.00 & 46.56 & 51.84 \\
+\hline
 $L_3$  & 25.00 & 16.61 & 33.01 \\
+\hline
 $L_4$  & 20.00 & 21.60 & 38.83 \\
+\hline
 $L_5$  & 25.00 & 32.15 & 38.15 \\
+\hline
 $L_6$  & 55.00 & 39.85 & 51.26 \\
+\hline
 $L_7$  & 35.00 & 19.16 & 38.22 \\
+\hline
 $L_8$  & 52.00 & 52.07 & 53.01 \\
+\hline
 $c_2$  & 46.01 & 26.30 & 21.84 \\
+\hline
 $h_{sp}$ & 17.00 & 14.91 & 15.63 \\
+\hline
 $d_{sp}$ & 18.00 & \phantom{0}7.87 & \phantom{0}5.00 \\
-\midrule
+\hline
 $\sum$ estructurales & 380.0 & \textbf{347.2} & 457.1 \\
-\bottomrule
+\hline
 \end{tabular}
 \label{tab:dimensiones}
 \end{center}
 \end{table}
-\FloatBarrier
 
 \subsection{Biofidelidad de las trayectorias}
 La Fig.~\ref{fig:biofid_ed} muestra la superposición de las trayectorias
@@ -410,7 +430,6 @@ IFD) superpuestas a los puntos MOCAP.}
 acompañan a los puntos MOCAP; la IFD se ajusta con especial fidelidad.}
 \label{fig:biofid_ga}
 \end{figure}
-\FloatBarrier
 
 \subsection{Convergencia}
 La Fig.~\ref{fig:convergencia} presenta las curvas de convergencia. Ambos
@@ -430,7 +449,6 @@ forma sostenida durante casi todas las generaciones; la ED alcanza un valor
 final algo menor y el AG converge a una solución muy cercana.}
 \label{fig:convergencia}
 \end{figure}
-\FloatBarrier
 
 \section{Discusión}
 El espacio de diseño de la síntesis dimensional es \emph{continuo} y altamente
