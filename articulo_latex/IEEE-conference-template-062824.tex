@@ -127,9 +127,11 @@ ocho eslabones $L_1$--$L_8$, el balancín $c_2$ de la segunda etapa de cuatro
 barras, los desplazamientos del soporte $h_{sp}$ y $d_{sp}$, el ángulo auxiliar
 de la falange medial $\theta_{aux}^{FM}$, la relación de engranaje $r_g$ y el
 desfase angular de entrada $\theta_{\text{off}}$. La Tabla~\ref{tab:bounds}
-resume los límites de búsqueda. Las longitudes de eslabón se acotaron a 60~mm
-como máximo para favorecer un mecanismo compacto y fabricable, y el ángulo
-auxiliar se limitó a $70^\circ$.
+resume los límites de búsqueda. Las longitudes de cada eslabón se acotan a
+60~mm como máximo para favorecer un mecanismo compacto y fabricable, y el ángulo
+auxiliar $\theta_{aux}^{FM}$ se limita a $70^\circ$ para evitar una
+hiperflexión anatómicamente inviable de la falange medial que provocaría
+interferencia mecánica con el dedo del usuario.
 
 \begin{table}[htbp]
 \caption{Variables de diseño y límites de búsqueda}
@@ -138,15 +140,15 @@ auxiliar se limitó a $70^\circ$.
 \hline
 \textbf{Parámetro} & \textbf{Mín.} & \textbf{Máx.} \\
 \hline
-$B_1$, $B_2$ (m) & 0.015 & 0.060 \\
+$B_1$, $B_2$ (mm) & 15 & 60 \\
 \hline
-$L_1$--$L_8$ (m)        & 0.010 & 0.060 \\
+$L_1$--$L_8$ (mm)        & 10 & 60 \\
 \hline
-$c_2$ (m)      & 0.010 & 0.055 \\
+$c_2$ (mm)      & 10 & 55 \\
 \hline
-$h_{sp}$ (m)            & 0.005 & 0.030 \\
+$h_{sp}$ (mm)            & 5 & 30 \\
 \hline
-$d_{sp}$ (m)            & 0.005 & 0.023 \\
+$d_{sp}$ (mm)            & 5 & 23 \\
 \hline
 $\theta_{aux}^{FM}$ (deg) & 0 & 70 \\
 \hline
