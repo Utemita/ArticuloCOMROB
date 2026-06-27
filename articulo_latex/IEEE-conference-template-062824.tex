@@ -162,41 +162,46 @@ $\theta_{\text{off}}$ (rad) & $-\pi$ & $\pi$ \\
 \end{table}
 
 \subsection{Función objetivo}
-El ajuste se mide con la distancia de Chamfer simétrica entre la nube de puntos
-de captura de movimiento $M$ \cite{ref_pizzolato} y la trayectoria
-simulada $S$. Antes de evaluar el
-error, la trayectoria simulada se alinea de forma rígida (rotación $R$ y
-traslación $\mathbf{t}$) con los datos mediante una solución de Procrustes, de
-modo que el error refleje la \emph{forma} de la curva y no su colocación
-absoluta en el plano:
+El ajuste se mide con la distancia de Chamfer \cite{ref_chamfer} simétrica entre
+la nube de puntos de captura de movimiento $M$ y la trayectoria simulada $S$.
+Antes de evaluar el error, la trayectoria simulada se alinea de forma rígida
+(rotación $R$ y traslación $\mathbf{t}$) con los datos mediante una solución de
+Procrustes \cite{ref_procrustes}, de modo que el error refleja la \emph{forma}
+de la curva y no su colocación absoluta en el plano:
 \begin{equation}
 d_C(M,S)=\frac{1}{|M|}\!\sum_{\mathbf{m}\in M}\!\min_{\mathbf{s}\in S}\lVert \mathbf{m}-\mathbf{s}\rVert
 +\frac{1}{|S|}\!\sum_{\mathbf{s}\in S}\!\min_{\mathbf{m}\in M}\lVert \mathbf{s}-\mathbf{m}\rVert .
 \label{eq:chamfer}
 \end{equation}
-El primer término penaliza puntos MOCAP sin un punto simulado cercano y el
-segundo penaliza puntos simulados que se alejan de la curva objetivo; su suma es
-una métrica robusta frente a diferencias de muestreo entre ambas curvas.
+El primer término penaliza los puntos del MOCAP sin un punto simulado cercano y
+el segundo penaliza puntos simulados que se alejan de la curva objetivo; su suma
+es una métrica robusta frente a diferencias de muestreo entre ambas curvas.
 
 La función objetivo combina el error de forma de las dos trayectorias (la de la
 IFP y la de la IFD), una penalización de monotonicidad $P_{\text{mono}}$ sobre
 la IFD para evitar retrocesos del movimiento, y dos términos de regularización
 suave que empujan hacia dimensiones y ángulo auxiliar pequeños sin degradar el
-ajuste:
+ajuste. El término $P_{\text{mono}}$ penaliza inversiones de trayectoria
+(ganchos o bucles) en las que el mecanismo del exoesqueleto retrocede sobre su
+recorrido; su inclusión garantiza que la trayectoria simulada progresa de forma
+monótona sin formar lazos que provocarían atascos en el mecanismo o fuerzas no
+deseadas sobre el dedo:
 \begin{align}
 f(\mathbf{p}) =\;& w_{IFP}\,d_C(M_{IFP},S_{IFP}) + w_{IFD}\,d_C(M_{IFD},S_{IFD}) \nonumber\\
 & + w_{m}\,P_{\text{mono}}(S_{IFD}) + w_{d}\!\sum_{i}\!L_i + w_{a}\frac{\theta_{aux}^{FM}}{\pi}.
 \label{eq:obj}
 \end{align}
-Los pesos empleados son $w_{IFP}=0.40$, $w_{IFD}=0.60$, $w_{m}=5.0$ y
+Los pesos son $w_{IFP}=0.40$, $w_{IFD}=0.60$, $w_{m}=5.0$ y
 $w_{d}=w_{a}=5\times10^{-4}$. Se asigna mayor peso a la IFD porque es la
 articulación más alejada de la entrada y, por tanto, la más difícil de ajustar:
-acumula los errores de las dos etapas. Las configuraciones inviables (sin
-ensamble o con retroceso) reciben una penalización fija de $1000$, lo que crea
-amplias mesetas en el espacio de búsqueda y refuerza el carácter multimodal del
-problema. \emph{El planteamiento, los límites y la función objetivo son
-idénticos para la ED y el AG}, de modo que la comparación mide el algoritmo y no
-el planteamiento.
+acumula los errores de las dos etapas. Los valores de los pesos se ajustan
+mediante pruebas experimentales iterativas hasta obtener un equilibrio adecuado
+entre el error de forma, la penalización de retrocesos y la regularización. Las
+configuraciones inviables (sin ensamble o con retroceso) reciben una
+penalización fija de $1000$, lo que crea amplias mesetas en el espacio de
+búsqueda y refuerza el carácter multimodal del problema. \emph{El
+planteamiento, los límites y la función objetivo son idénticos para la ED y el
+AG}, de modo que la comparación mide el algoritmo y no el planteamiento.
 
 \section{Algoritmos de optimización}
 Ambos algoritmos se ejecutaron con la misma semilla aleatoria (42) y el mismo
