@@ -21,7 +21,7 @@
 
 \begin{document}
 
-\title{Síntesis cinemática parcial de un mecanismo de exoesqueleto de dedo utilizando las técnicas de optimización Evolución Diferencial y Algoritmo Genético}
+\title{Síntesis cinemática parcial de un mecanismo de exoesqueleto de dedo mediante Evolución Diferencial y Algoritmo Genético: comparación bajo sintonización simétrica de hiperparámetros}
 
 \author{\IEEEauthorblockN{}
 \IEEEauthorblockA{Información de autoría omitida para revisión a doble ciego}
@@ -30,38 +30,28 @@
 \maketitle
 
 \begin{abstract}
-La síntesis dimensional de mecanismos para exoesqueletos de mano consiste en
-elegir las longitudes de los eslabones para que el extremo del mecanismo
-reproduzca las trayectorias articulares naturales del dedo en todo el rango de
-flexión. Es un problema de optimización difícil por tres motivos: la relación
-entre las longitudes y la curva que describe el mecanismo no es lineal, existen
-muchas combinaciones de longitudes que dan errores parecidos (es decir, hay
-múltiples óptimos locales) y buena parte de las soluciones ni siquiera son
-válidas porque el mecanismo no llega a ensamblar. Este trabajo compara dos
-metaheurísticas poblacionales muy utilizadas, la Evolución Diferencial (ED) y el
-Algoritmo Genético (AG), en la síntesis dimensional \emph{parcial} de un
-mecanismo de exoesqueleto de dedo, es decir, ajustando el movimiento hasta la
-falange medial (articulación interfalángica distal, IFD). El problema se formula
-con 16 parámetros de diseño y una función objetivo basada en la distancia de
-Chamfer ponderada respecto a 120 puntos de captura de movimiento (MOCAP) de un
-agarre de pinza fina, tomados de una base de datos pública de movimientos de la
-mano \cite{ref_pizzolato}, a la que se añaden una penalización por retrocesos del
-movimiento y un término que favorece dimensiones pequeñas. Para que la
-comparación sea justa, los hiperparámetros de ambos algoritmos se sintonizaron de
-manera simétrica con la herramienta Optuna, usando la misma semilla y el mismo
-número de 25 ensayos por método, de modo que ninguno se evalúa con ajustes
-arbitrarios. Bajo este planteamiento, con la misma función objetivo, los mismos
-límites y el mismo número de generaciones, la ED alcanzó un error global de
-2.17~mm frente a 2.55~mm del AG y produjo un mecanismo más compacto (suma de
-eslabones estructurales de 347.2~mm contra 457.1~mm). Una vez sintonizado, el AG
-resultó competitivo e incluso ajustó mejor la articulación interfalángica distal
-(IFD: 1.43~mm contra 1.53~mm de la ED), mientras que la ED conservó la ventaja en
-el error global y en la falange proximal (IFP). Se analiza por qué la ED mantiene
-esa ligera ventaja en un espacio de búsqueda continuo: su mutación diferencial
-ajusta el tamaño de los pasos de forma automática, lo que favorece el
-refinamiento de la solución. Los resultados indican que ambas metaheurísticas
-son adecuadas para esta clase de síntesis dimensional y que la elección concreta
-debe atender al compromiso entre error de ajuste y compacidad del mecanismo.
+Este trabajo utiliza dos técnicas de optimización, la Evolución Diferencial (ED) y
+el Algoritmo Genético (AG), para obtener la síntesis dimensional \emph{parcial} de
+un mecanismo de exoesqueleto de dedo, ajustando el movimiento hasta la falange
+medial (articulación interfalángica distal, IFD). El problema se formula con 16
+parámetros de diseño y una función objetivo basada en la distancia de Chamfer
+ponderada respecto a 120 puntos de captura de movimiento (MOCAP) de un agarre de
+pinza fina, tomados de la base de datos pública de cinemática de la mano de
+Pizzolato~et~al.\ \cite{ref_pizzolato}, a la que se añaden una penalización por
+retrocesos del movimiento y un término que favorece dimensiones pequeñas. Los
+hiperparámetros de ambos algoritmos se sintonizan de manera simétrica con la
+herramienta Optuna, usando la misma semilla y el mismo número de 25 ensayos por
+método. Bajo este planteamiento, con la misma función objetivo, los mismos límites
+y el mismo número de generaciones, la ED alcanza un error global de 2.17~mm frente
+a 2.55~mm del AG y produce un mecanismo más compacto (suma de eslabones
+estructurales de 347.2~mm contra 457.1~mm). El AG, no obstante, obtiene menor
+error en la articulación IFD (1.43~mm frente a 1.53~mm), mientras que la ED
+mantiene ventaja en el error global y en la falange proximal (IFP). La ED conserva
+una ligera superioridad en este espacio de búsqueda continuo porque su mutación
+diferencial ajusta el tamaño de los pasos de forma automática, lo que favorece el
+refinamiento de la solución. Los resultados indican que ambas técnicas son
+adecuadas para esta clase de síntesis dimensional y que la elección concreta debe
+optimizar el compromiso entre error de ajuste y compacidad del mecanismo.
 \end{abstract}
 
 \begin{IEEEkeywords}
