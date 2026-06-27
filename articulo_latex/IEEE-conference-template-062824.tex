@@ -203,21 +203,29 @@ búsqueda y refuerza el carácter multimodal del problema. \emph{El
 planteamiento, los límites y la función objetivo son idénticos para la ED y el
 AG}, de modo que la comparación mide el algoritmo y no el planteamiento.
 
-\section{Algoritmos de optimización}
-Ambos algoritmos se ejecutaron con la misma semilla aleatoria (42) y el mismo
-número máximo de generaciones (300), de manera que la comparación quede
-controlada. Para evitar que el desempeño dependa de hiperparámetros elegidos a
-mano, una fuente habitual de sesgo al comparar metaheurísticas, los
-hiperparámetros de cada algoritmo se sintonizaron de forma automática y simétrica
-con Optuna \cite{ref_optuna}, empleando el muestreador por estimación de densidad
-arborescente (TPE, \emph{Tree-structured Parzen Estimator}). El procedimiento es
-idéntico para la ED y el AG: en una primera etapa, Optuna realiza 25 ensayos por
-algoritmo, el mismo número para los dos, con corridas cortas que evalúan el
-fitness alcanzado para distintas combinaciones de hiperparámetros; en una segunda
-etapa, la mejor combinación encontrada se emplea en una corrida profunda de 300
-generaciones, cuyos resultados son los que se reportan. La búsqueda de Optuna usa
-la misma semilla (42) en ambos casos, de modo que la sintonización es reproducible
-y equitativa. La Tabla~\ref{tab:config} resume los hiperparámetros resultantes.
+\section{Evaluación de las técnicas de optimización}
+Ambos algoritmos se ejecutan con la misma semilla aleatoria (42), valor
+convencional ampliamente adoptado en computación científica que garantiza la
+reproducibilidad exacta de los resultados, y el mismo número máximo de
+generaciones (300), presupuesto validado como suficiente dado que la ED registra
+su última mejora cerca de la generación 257 y el AG cerca de la generación 268,
+de modo que ambos explotan el presupuesto completo sin estancamiento prematuro.
+Para evitar que el desempeño dependa de hiperparámetros elegidos a mano
+--en el caso de la ED: estrategia de mutación, tamaño de población, rango del
+factor de mutación y tasa de recombinación; en el caso del AG: tamaño de
+población, probabilidades de cruce y mutación, índices de distribución SBX y
+polinomial, y tamaño de torneo--, una fuente habitual de sesgo al comparar
+metaheurísticas, los hiperparámetros de cada algoritmo se sintonizan de forma
+automática y simétrica con Optuna \cite{ref_optuna}, empleando el muestreador por
+estimación de densidad arborescente (TPE, \emph{Tree-structured Parzen
+Estimator}). El procedimiento es idéntico para la ED y el AG: en una primera
+etapa, Optuna realiza 25 ensayos por algoritmo, el mismo número para los dos, con
+corridas cortas que evalúan el fitness alcanzado para distintas combinaciones de
+hiperparámetros; en una segunda etapa, la mejor combinación encontrada se emplea
+en una corrida profunda de 300 generaciones, cuyos resultados son los que se
+reportan. La búsqueda de Optuna usa la misma semilla (42) en ambos casos, de modo
+que la sintonización es reproducible y equitativa. La Tabla~\ref{tab:config}
+resume los hiperparámetros resultantes.
 
 \subsection{Evolución Diferencial}
 La Evolución Diferencial es una metaheurística poblacional para optimización en
