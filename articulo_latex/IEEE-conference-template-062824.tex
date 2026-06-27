@@ -331,11 +331,11 @@ AG ajusta ligeramente mejor la IFD.}
 \label{fig:errores}
 \end{figure}
 
-\subsection{Coherencia de las dimensiones}
+\subsection{Análisis dimensional}
 La Tabla~\ref{tab:dimensiones} compara, eslabón por eslabón, las dimensiones del
 diseño CAD de referencia frente a las optimizadas por la ED y el AG. Las
 longitudes obtenidas por la ED son coherentes con los límites de la
-Tabla~\ref{tab:bounds} y dan lugar a un mecanismo compacto: la suma de los once
+Tabla~\ref{tab:bounds} y dan lugar a un mecanismo compacto, donde la suma de los once
 eslabones estructurales ($B_1$, $B_2$, $L_1$--$L_8$ y $c_2$) es de 347.2~mm para
 la ED, 457.1~mm para el AG y aproximadamente 380.0~mm para el diseño CAD base.
 Es decir, la ED no sólo obtiene un error global algo menor, sino que además
@@ -389,13 +389,15 @@ $\sum$ estructurales & 380.0 & \textbf{347.2} & 457.1 \\
 \subsection{Biofidelidad de las trayectorias}
 La Fig.~\ref{fig:biofid_ed} muestra la superposición de las trayectorias
 simuladas por la ED contra los 120 puntos MOCAP del agarre de pinza fina: tanto
-la curva de la IFP como la de la IFD siguen de cerca la forma fisiológica. La
+la curva de la IFP como la de la IFD siguen de cerca la forma fisiológica, con
+errores de Chamfer de 2.82~mm y 1.53~mm respectivamente. La
 Fig.~\ref{fig:biofid_ga} presenta el mismo resultado para el AG, cuyas
-trayectorias también acompañan a los datos; en particular, la curva de la IFD
-reproduce con fidelidad la flexión natural, en concordancia con el bajo error que
-el AG obtiene en esa articulación. Ambas soluciones, por tanto, exhiben una
-biofidelidad satisfactoria, con diferencias sutiles que se reparten entre las dos
-articulaciones según el algoritmo.
+trayectorias acompañan a los datos con errores de 3.68~mm (IFP) y 1.43~mm (IFD);
+la curva de la IFD del AG reproduce con mayor fidelidad la flexión natural,
+obteniendo 0.10~mm menos de error que la ED en esa articulación. Ambas soluciones
+exhiben una biofidelidad satisfactoria: la ED ofrece mejor seguimiento global
+(2.17~mm frente a 2.55~mm del AG) y en la IFP, mientras que el AG presenta
+ventaja específica en la IFD.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{biofidelidad_simplificado_ED.png}}
