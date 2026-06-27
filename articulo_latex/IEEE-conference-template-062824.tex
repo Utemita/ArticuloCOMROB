@@ -244,17 +244,20 @@ conforme converge, los pasos se reducen (explotación), sin necesidad de fijar
 una amplitud de mutación constante.
 
 \subsection{Algoritmo Genético}
-Se implementó un AG real codificado con selección por torneo (tamaño 3), cruza
+Se implementa un AG real codificado con selección por torneo (tamaño 3), cruza
 binaria simulada (SBX) \cite{ref_sbx} y mutación polinomial. Los hiperparámetros
-sintonizados por Optuna fueron una población de 52 individuos, probabilidad de
+sintonizados por Optuna son una población de 52 individuos, probabilidad de
 cruza $0.63$, probabilidad de mutación $0.22$, índices de distribución
 $\eta_c=16$ (SBX) y $\eta_m=14$ (mutación polinomial) y elitismo de 2 individuos.
 La SBX y la mutación polinomial son operadores adecuados para variables
 continuas; sus índices de distribución, antes fijados a mano, aquí los determina
-Optuna junto con el resto de los hiperparámetros. Se aplicó un criterio de paro
+Optuna junto con el resto de los hiperparámetros. Se aplica un criterio de paro
 temprano por estancamiento con una tolerancia de 100 generaciones sin mejora; en
-la corrida reportada el AG siguió mejorando hasta una fase avanzada y agotó las
-300 generaciones sin activar dicho paro.
+la corrida reportada el AG sigue mejorando hasta una fase avanzada y agota las
+300 generaciones sin activar dicho paro, lo que indica que la sintonización de
+Optuna encuentra una configuración que mantiene diversidad genética suficiente
+para seguir explorando el espacio de búsqueda durante todo el presupuesto
+asignado.
 
 \begin{table}[htbp]
 \caption{Configuración de los algoritmos (hiperparámetros sintonizados con Optuna)}
@@ -286,13 +289,13 @@ semilla: 42 & élite: 2, tolerancia: 100 \\
 
 \section{Resultados}
 \subsection{Error de ajuste}
-La Tabla~\ref{tab:resultados} reúne las métricas de ambas corridas. La ED obtuvo
+La Tabla~\ref{tab:resultados} reúne las métricas de ambas corridas. La ED obtiene
 un error global de 2.17~mm, ligeramente menor que los 2.55~mm del AG. El reparto
-por articulación, ilustrado en la Fig.~\ref{fig:errores}, es revelador: la ED
+por articulación, ilustrado en la Fig.~\ref{fig:errores}, muestra que la ED
 ajusta mejor la falange proximal (IFP: 2.82~mm contra 3.68~mm), mientras que el
 AG, una vez sintonizado, reproduce con mayor fidelidad la articulación
 interfalángica distal (IFD: 1.43~mm contra 1.53~mm de la ED). En conjunto, las dos soluciones quedan
-muy próximas en error de forma, lo que confirma que ambas metaheurísticas son
+muy próximas en error de forma, lo que confirma que ambas técnicas son
 capaces de propagar el movimiento de forma adecuada hasta el extremo del
 mecanismo.
 
@@ -403,8 +406,7 @@ IFD) superpuestas a los puntos MOCAP.}
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{biofidelidad_simplificado_GA.png}}
-\caption{Biofidelidad de la solución del AG: las trayectorias de la IFP y la IFD
-acompañan a los puntos MOCAP; la IFD se ajusta con especial fidelidad.}
+\caption{Biofidelidad de la solución del AG: las trayectorias de la IFP y la IFD siguen a los puntos MOCAP.}
 \label{fig:biofid_ga}
 \end{figure}
 
