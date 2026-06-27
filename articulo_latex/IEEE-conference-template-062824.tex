@@ -338,7 +338,7 @@ longitudes obtenidas por la ED son coherentes con los límites de la
 Tabla~\ref{tab:bounds} y dan lugar a un mecanismo compacto, donde la suma de los once
 eslabones estructurales ($B_1$, $B_2$, $L_1$--$L_8$ y $c_2$) es de 347.2~mm para
 la ED, 457.1~mm para el AG y aproximadamente 380.0~mm para el diseño CAD base.
-Es decir, la ED no sólo obtiene un error global algo menor, sino que además
+Es decir, la ED no sólo obtiene un error global menor, sino que además
 entrega el mecanismo más compacto de los tres, mientras que el AG tiende a
 soluciones de mayor tamaño que el propio diseño de referencia. La compacidad es
 deseable para la fabricación, el peso y la portabilidad del dispositivo sobre la
@@ -417,8 +417,8 @@ La Fig.~\ref{fig:convergencia} presenta las curvas de convergencia. Ambos
 algoritmos descienden de forma sostenida y aprovechan prácticamente todo el
 número de generaciones disponible: la ED registra su última mejora cerca de la
 generación 257 y el AG cerca de la 268, de modo que ninguno se estanca de forma
-temprana. La ED alcanza un valor de la función objetivo algo menor, mientras que
-el AG converge a una solución muy próxima. Cabe notar que el AG llega a ese
+temprana. La ED alcanza un valor de la función objetivo de 0.002335, mientras que
+el AG converge a 0.002720. Cabe notar que el AG llega a ese
 resultado con un número de evaluaciones de la función objetivo sensiblemente
 menor (Tabla~\ref{tab:resultados}), lo que refleja su distinto mecanismo de
 muestreo del espacio de búsqueda.
@@ -426,8 +426,7 @@ muestreo del espacio de búsqueda.
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.92\columnwidth]{comparacion_convergencia.png}}
 \caption{Curvas de convergencia de la ED y el AG. Ambos métodos descienden de
-forma sostenida durante casi todas las generaciones; la ED alcanza un valor
-final algo menor y el AG converge a una solución muy cercana.}
+forma sostenida durante casi todas las generaciones; la ED converge a un fitness de 0.002335 y el AG a 0.002720.}
 \label{fig:convergencia}
 \end{figure}
 
@@ -444,59 +443,46 @@ se concentra cerca de una buena solución, los cambios se reducen automáticamen
 y el algoritmo afina el ajuste. Este ajuste automático del paso, sin necesidad de
 fijarlo de antemano, encaja de forma natural con variables continuas como las
 longitudes de los eslabones \cite{ref_de_survey,ref_ga_pso_de} y explica, en
-buena parte, que la ED alcance un error global algo menor y, sobre todo, el
+buena parte, que la ED alcance un error global de 2.17~mm y, sobre todo, el
 mecanismo más compacto.
 
 El AG real codificado se apoya en la cruza SBX y la mutación polinomial. Una vez
 que sus índices de distribución ($\eta_c$, $\eta_m$) y sus probabilidades se
-sintonizan con Optuna, en lugar de fijarse a mano, el AG resulta plenamente
-competitivo: alcanza un error global muy cercano al de la ED e incluso la supera
-en la articulación interfalángica distal (IFD). Este resultado matiza la idea, frecuente en
-la literatura, de que la ED domina sistemáticamente a los AG en problemas
+sintonizan con Optuna, en lugar de fijarse a mano, el AG alcanza un error global de 2.55~mm, muy cercano al de la ED, e incluso la supera
+en la articulación interfalángica distal (IFD). Este resultado muestra que la ED no domina sistemáticamente a los AG en problemas
 continuos \cite{ref_de_vs_ga,ref_ga_pso_de}: la brecha observada se reduce de
 manera notable cuando ambos algoritmos parten de una sintonización equitativa.
 La contrapartida del AG en este caso es que tiende a soluciones de mayor tamaño,
 lo que penaliza la compacidad del mecanismo.
 
 Conviene señalar una limitación metodológica relativa al costo de cómputo. La ED
-se evaluó con una implementación vectorizada y paralela, mientras que el AG se
-ejecutó en Python puro; por ello, la comparación de tiempos de ejecución está
+se evalúa con una implementación vectorizada y paralela, mientras que el AG se
+ejecuta en Python puro; por ello, la comparación de tiempos de ejecución está
 sesgada y no se reporta como criterio de mérito. Se enfatiza, en cambio, la
 \emph{calidad de la solución} y el número de evaluaciones de la función (nfev)
-como métrica de cómputo más justa. La ED alcanzó un error global ligeramente
-menor pese a realizar más evaluaciones, mientras que el AG obtuvo una solución
+como métrica de cómputo más justa. La ED alcanza un error global ligeramente
+menor pese a realizar más evaluaciones, mientras que el AG obtiene una solución
 muy próxima con un número de evaluaciones bastante menor, lo que sugiere
 que cada método explora el espacio de búsqueda con una eficiencia distinta.
 
-\section{Limitaciones y trabajo futuro}
-El estudio se limita al modelo simplificado (hasta la falange medial) y a una
-única corrida por algoritmo con semilla fija, lo que permite una comparación
-controlada pero no caracteriza la variabilidad estadística de cada método. Como
-trabajo futuro se contempla: (i) extender la optimización al modelo completo de
-tres falanges, incorporando la falange distal y la tercera etapa de cuatro
-barras; (ii) realizar comparaciones multi\-semilla con pruebas estadísticas para
-estimar la robustez de cada algoritmo; (iii) implementar ambos algoritmos en
-igualdad de condiciones de cómputo (mismo lenguaje y mismo nivel de
-vectorización), de modo que sus tiempos de ejecución puedan compararse sin sesgo;
-y (iv) validar físicamente el
-mecanismo óptimo mediante prototipado y medición de las trayectorias reales.
-
 \section{Conclusión}
-Se comparó la Evolución Diferencial y un Algoritmo Genético real codificado en
-la síntesis dimensional parcial (hasta la falange medial) de un mecanismo de
-exoesqueleto de dedo, bajo un planteamiento, una función objetivo y un mismo
+Se obtiene la síntesis dimensional parcial (hasta la falange medial) de un
+mecanismo de exoesqueleto de dedo utilizando las técnicas de optimización
+Evolución Diferencial y Algoritmo Genético real codificado, bajo un planteamiento, una función objetivo y un mismo
 número de generaciones, y con los hiperparámetros de ambos métodos sintonizados de
 forma simétrica con Optuna (muestreador TPE, 25 ensayos por algoritmo). La ED
-obtuvo un error global de 2.17~mm frente a 2.55~mm del AG y, de manera notable,
-entregó el mecanismo más compacto (347.2~mm de suma de eslabones estructurales,
-frente a 457.1~mm del AG). Una vez sintonizado, el AG resultó competitivo e
-incluso ajustó mejor la articulación interfalángica distal (IFD). El análisis
+obtiene un error global de 2.17~mm frente a 2.55~mm del AG y, de manera notable,
+entrega el mecanismo más compacto (347.2~mm de suma de eslabones estructurales,
+frente a 457.1~mm del AG). Una vez sintonizado, el AG resulta competitivo e
+incluso ajusta mejor la articulación interfalángica distal (IFD). El análisis
 sugiere que, para esta clase de problemas continuos y multimodales, la mutación
 diferencial de la ED, que ajusta por sí sola el tamaño de sus pasos, ofrece una
 ligera ventaja en error global y, sobre todo, en compacidad, mientras que un AG
 bien sintonizado alcanza una calidad de ajuste comparable. La ED se recomienda como método de referencia cuando la compacidad
 del mecanismo es prioritaria, sin que ello descarte al AG como alternativa
 válida para esta clase de síntesis dimensional.
+
+Como trabajo futuro se contempla: (i) extender la optimización al modelo completo de tres falanges, incorporando la falange distal y la tercera etapa de cuatro barras; (ii) realizar comparaciones multisemilla con pruebas estadísticas para estimar la robustez de cada algoritmo; (iii) implementar ambos algoritmos en igualdad de condiciones de cómputo (mismo lenguaje y mismo nivel de vectorización), de modo que sus tiempos de ejecución puedan compararse sin sesgo; y (iv) validar físicamente el mecanismo óptimo mediante prototipado y medición de las trayectorias reales.
 
 \input{references}
 \end{document}
