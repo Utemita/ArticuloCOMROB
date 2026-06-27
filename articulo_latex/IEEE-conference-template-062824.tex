@@ -63,55 +63,60 @@ mano, optimización dimensional, cadena de mecanismos.
 
 \section{Modelo cinemático del exoesqueleto}
 El modelo cinemático y el diseño del mecanismo del exoesqueleto fueron
-desarrollados por Pavel Palma Nicolás (referencia por agregar). Sobre ese diseño original se añadió en
-este trabajo una tercera etapa de cuatro barras, con el fin de corregir
-problemas de seguimiento que presentaba el modelo original. El presente estudio
-se centra en la optimización dimensional del mecanismo resultante.
+desarrollados por Pavel Palma Nicolás (referencia por agregar). Sobre este diseño
+se añade una tercera etapa de cuatro barras, con el fin de corregir problemas de
+seguimiento que presentaba el modelo original en la articulación IFD. El presente
+estudio se centra en la optimización dimensional del mecanismo resultante
+(Fig.~\ref{fig:diagrama}).
 
 El dispositivo reproduce la flexión del dedo mediante una cadena de etapas
 acopladas accionadas por una única manivela de entrada, lo que permite gobernar
 todas las articulaciones con un solo grado de libertad activo. La primera etapa
-combina un mecanismo de cinco barras y uno de cuatro barras que trasladan el
-movimiento desde la articulación metacarpofalángica (MCF) hasta la falange
-proximal (articulación interfalángica proximal, IFP). La segunda etapa repite el
-patrón de cinco barras más cuatro barras para llevar el movimiento desde la IFP
-hasta la falange medial (articulación IFD). El modelo \emph{completo} incorpora
-además una tercera etapa de cuatro barras que ubica la falange distal; en este
-estudio se emplea el modelo \emph{simplificado}, que se detiene en la falange
-medial. Esta elección reduce la instancia sin perder las dificultades esenciales
-del problema (acoplamiento de etapas, restricciones de ensamble y monotonicidad
-del movimiento), por lo que resulta idónea para comparar de manera justa el
-comportamiento de la ED y el AG.
+combina un mecanismo de cinco barras (eslabones $L_1$, $L_2$, $L_3$, $L_4$ y la
+bancada $B_1$) y uno de cuatro barras (eslabones $L_4$, $L_5$, $h_{sp}$,
+$d_{sp}$ y la bancada $B_2$; los soportes $h_{sp}$ y $d_{sp}$ forman un
+triángulo rectángulo cuya hipotenusa actúa como un único eslabón equivalente) que
+trasladan el movimiento desde la articulación metacarpofalángica (MCF) hasta la
+falange proximal (articulación interfalángica proximal, IFP). La segunda etapa
+repite el patrón de cinco barras (eslabones $L_5$, $L_3$, $L_6$, $L_7$ y la
+bancada con longitud $F_p - 2\,d_{sp}$) más cuatro barras (eslabones $L_7$,
+$L_8$, $c_2$ y la distancia desde IFP hasta $h_{sp}$) para llevar el movimiento
+desde la IFP hasta la falange medial (articulación IFD). Las falanges proximal
+$F_p$ y medial $F_m$ forman la línea del dedo (articulaciones MCF, IFP e IFD),
+mientras que la cadena de eslabones $L_1$--$L_8$ se ubica sobre el dorso. Se
+indican las bancadas $B_1$ y $B_2$, y el balancín $c_2$, los desplazamientos del
+soporte $h_{sp}$ y $d_{sp}$, y el ángulo auxiliar $\theta_{aux_{fm}}$ que orienta
+la falange medial respecto al balancín $c_2$. Las juntas de revoluta se dibujan
+como círculos blancos y los apoyos fijos con achurado. El modelo se detiene en la
+falange medial; el tercer mecanismo de cuatro barras y la falange distal no
+forman parte de esta versión. El modelo \emph{completo} incorpora además una
+tercera etapa de cuatro barras que ubica la falange distal; en este estudio se
+emplea el modelo simplificado, que analiza hasta la falange medial. Esta elección
+reduce la instancia sin perder las dificultades esenciales del problema
+(acoplamiento de etapas, restricciones de ensamble y monotonicidad del
+movimiento).
 
-Las longitudes de las falanges se consideran fijas y se tomaron de las medidas de
+Las longitudes de las falanges se consideran fijas y se toman de las medidas de
 un dedo humano real: falange proximal $L_{FP}=49$~mm, falange medial
 $L_{FM}=26$~mm y falange distal $L_{FD}=24$~mm (esta última sólo en el modelo
-completo). Dada una posición de
-manivela $\theta_2$, la entrada de la primera etapa se obtiene mediante una
-relación de engranaje $r_g$ y un desfase $\theta_{\text{off}}$ como
-$\theta_1=\theta_2/r_g+\theta_{\text{off}}$. La cinemática directa resuelve de
-forma secuencial los lazos de cinco y cuatro barras y propaga las posiciones de
-la IFP y la IFD a lo largo de todo el barrido de la manivela. Cuando una
-configuración no ensambla, produce valores no finitos o genera un retroceso de
-la falange medial (no monotonicidad del ángulo de la IFD), la pose se marca como
-inviable y se descarta. La Fig.~\ref{fig:diagrama} muestra el esquema cinemático
-del mecanismo simplificado del exoesqueleto en una pose intermedia del recorrido:
-la cadena de eslabones se sitúa sobre el dorso del dedo y se etiquetan los
-parámetros de diseño. Las posiciones de las juntas provienen de la misma
-cinemática directa que evalúa el optimizador, de modo que el dibujo refleja el
-mecanismo realmente optimizado.
+completo). Dada una posición de manivela $\theta_2$, la entrada de la primera
+etapa se obtiene mediante una relación de engranaje $r_g$ y un desfase
+$\theta_{\text{off}}$ como $\theta_1=\theta_2/r_g+\theta_{\text{off}}$. La
+cinemática directa resuelve de forma secuencial los lazos de cuatro barras y
+propaga las posiciones de la IFP y la IFD a lo largo de todo el barrido de la
+manivela. Cuando una configuración no ensambla, produce valores no finitos o
+genera un retroceso de la falange medial (no monotonicidad del ángulo de la IFD),
+la pose se marca como inviable y se descarta. La Fig.~\ref{fig:diagrama} muestra
+el esquema cinemático del mecanismo simplificado del exoesqueleto en una pose
+intermedia del recorrido: la cadena de eslabones se sitúa sobre el dorso del dedo
+y se etiquetan los parámetros de diseño. Las posiciones de las juntas provienen
+de la misma cinemática directa que evalúa el optimizador, de modo que la
+Fig.~\ref{fig:diagrama} refleja el mecanismo realmente optimizado.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{diagrama_modelo_simplificado.pdf}}
 \caption{Esquema cinemático del mecanismo simplificado del exoesqueleto en una
-pose intermedia. Las falanges proximal $F_p$ y medial $F_m$ forman la línea del
-dedo (articulaciones MCF, IFP e IFD), mientras que la cadena de eslabones
-$L_1$--$L_8$ se ubica sobre el dorso. Se indican las bancadas $B_1$ y $B_2$, los
-balancines $c$ y $c_2$, los desplazamientos del soporte $h_{sp}$ y $d_{sp}$, y el
-ángulo auxiliar $\theta_{aux_{fm}}$ que orienta la falange medial respecto al
-balancín $c_2$. Las juntas de revoluta se dibujan como círculos blancos y los
-apoyos fijos con achurado. El modelo se detiene en la falange medial; el tercer
-mecanismo de cuatro barras y la falange distal no forman parte de esta versión.}
+pose intermedia.}
 \label{fig:diagrama}
 \end{figure}
 
