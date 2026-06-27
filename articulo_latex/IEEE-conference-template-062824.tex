@@ -228,19 +228,20 @@ que la sintonización es reproducible y equitativa. La Tabla~\ref{tab:config}
 resume los hiperparámetros resultantes.
 
 \subsection{Evolución Diferencial}
-La Evolución Diferencial es una metaheurística poblacional para optimización en
+La Evolución Diferencial es una técnica poblacional para optimización en
 espacios continuos, cuyas variantes y aplicaciones han sido objeto de revisiones
-extensas \cite{ref_de_recent,ref_de_image}. En este trabajo se empleó la
+extensas \cite{ref_de_recent,ref_de_image}. En este trabajo se utiliza la
 implementación \texttt{differential\_evolution} de SciPy con la
-estrategia \texttt{best1bin}. Los hiperparámetros sintonizados por Optuna fueron
+estrategia \texttt{best1bin}. Los hiperparámetros sintonizados por Optuna son
 un tamaño de población relativo $\text{popsize}=28$, un factor de mutación
 diferencial que varía de forma aleatoria en cada generación dentro del rango
-$[0.54,0.85]$ y recombinación $0.77$, con tolerancia $10^{-7}$. En cada generación, los vectores de prueba se
-construyen a partir del mejor individuo y de la diferencia escalada entre dos
-individuos elegidos al azar. Esta mutación diferencial escala automáticamente sus
-pasos con la dispersión de la población: cuando la población está dispersa los
-pasos son grandes (exploración) y, conforme converge, los pasos se reducen
-(explotación), sin necesidad de fijar una amplitud de mutación constante.
+$[0.54,\,0.85]$ y recombinación $0.77$, con tolerancia $10^{-7}$. En cada
+generación, los vectores de prueba se construyen a partir del mejor individuo y
+de la diferencia escalada entre dos individuos elegidos al azar. Esta mutación
+diferencial escala automáticamente sus pasos con la dispersión de la población:
+cuando la población está dispersa los pasos son grandes (exploración) y,
+conforme converge, los pasos se reducen (explotación), sin necesidad de fijar
+una amplitud de mutación constante.
 
 \subsection{Algoritmo Genético}
 Se implementó un AG real codificado con selección por torneo (tamaño 3), cruza
