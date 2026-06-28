@@ -21,11 +21,9 @@
 
 \begin{document}
 
-\title{Síntesis cinemática parcial de un mecanismo de exoesqueleto de dedo mediante Evolución Diferencial y Algoritmo Genético: comparación bajo sintonización simétrica de hiperparámetros}
+\title{Síntesis cinemática parcial de un mecanismo de exoesqueleto de dedo mediante Evolución Diferencial y Algoritmo Genético}
 
-\author{\IEEEauthorblockN{}
-\IEEEauthorblockA{Información de autoría omitida para revisión a doble ciego}
-}
+\author{}
 
 \maketitle
 
@@ -62,10 +60,9 @@ mano, optimización dimensional, cadena de mecanismos.
 \input{Introduction}
 
 \section{Modelo cinemático del exoesqueleto}
-El modelo cinemático y el diseño del mecanismo del exoesqueleto fueron
-desarrollados por Pavel Palma Nicolás (referencia por agregar). Sobre este diseño
+Sobre este diseño
 se añade una tercera etapa de cuatro barras, con el fin de corregir problemas de
-seguimiento que presentaba el modelo original en la articulación IFD. El presente
+seguimiento que presenta el modelo original en la articulación IFD. El presente
 estudio se centra en la optimización dimensional del mecanismo resultante
 (Fig.~\ref{fig:diagrama}).
 
@@ -173,6 +170,10 @@ d_C(M,S)=\frac{1}{|M|}\!\sum_{\mathbf{m}\in M}\!\min_{\mathbf{s}\in S}\lVert \ma
 +\frac{1}{|S|}\!\sum_{\mathbf{s}\in S}\!\min_{\mathbf{m}\in M}\lVert \mathbf{s}-\mathbf{m}\rVert .
 \label{eq:chamfer}
 \end{equation}
+donde $M$ es el conjunto de puntos de captura de movimiento (MOCAP), $S$ es el
+conjunto de puntos de la trayectoria simulada, $\mathbf{m}$ y $\mathbf{s}$ son
+puntos individuales de cada conjunto, y $\lVert\cdot\rVert$ denota la norma
+euclidiana en el plano.
 El primer término penaliza los puntos del MOCAP sin un punto simulado cercano y
 el segundo penaliza puntos simulados que se alejan de la curva objetivo; su suma
 es una métrica robusta frente a diferencias de muestreo entre ambas curvas.
@@ -191,6 +192,12 @@ f(\mathbf{p}) =\;& w_{IFP}\,d_C(M_{IFP},S_{IFP}) + w_{IFD}\,d_C(M_{IFD},S_{IFD})
 & + w_{m}\,P_{\text{mono}}(S_{IFD}) + w_{d}\!\sum_{i}\!L_i + w_{a}\frac{\theta_{aux}^{FM}}{\pi}.
 \label{eq:obj}
 \end{align}
+donde $d_C(M_{IFP},S_{IFP})$ y $d_C(M_{IFD},S_{IFD})$ son las distancias de
+Chamfer entre los puntos MOCAP y la trayectoria simulada en las articulaciones
+IFP e IFD respectivamente, $P_{\text{mono}}(S_{IFD})$ es la penalización por
+inversiones de trayectoria en la IFD, $\sum_{i} L_i$ es la suma de las longitudes
+de los eslabones estructurales, y $\theta_{aux}^{FM}$ es el ángulo auxiliar de la
+falange medial normalizado por $\pi$.
 Los pesos son $w_{IFP}=0.40$, $w_{IFD}=0.60$, $w_{m}=5.0$ y
 $w_{d}=w_{a}=5\times10^{-4}$. Se asigna mayor peso a la IFD porque es la
 articulación más alejada de la entrada y, por tanto, la más difícil de ajustar:
@@ -199,14 +206,43 @@ mediante pruebas experimentales iterativas hasta obtener un equilibrio adecuado
 entre el error de forma, la penalización de retrocesos y la regularización. Las
 configuraciones inviables (sin ensamble o con retroceso) reciben una
 penalización fija de $1000$, lo que crea amplias mesetas en el espacio de
-búsqueda y refuerza el carácter multimodal del problema. \emph{El
+búsqueda y refuerza el carácter multimodal del problema. El
 planteamiento, los límites y la función objetivo son idénticos para la ED y el
-AG}, de modo que la comparación mide el algoritmo y no el planteamiento.
+AG, de modo que la comparación mide el algoritmo y no el planteamiento.
+
+La Tabla~\ref{tab:restricciones} resume las restricciones cinemáticas que se
+aplican durante la evaluación de cada individuo. Si alguna de estas condiciones
+se viola, la configuración se considera inviable y recibe la penalización fija
+de $1000$.
+
+\begin{table}[htbp]
+\caption{Restricciones cinemáticas aplicadas en ambos algoritmos}
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Restricción} & \textbf{Condición de penalización} \\
+\hline
+No ensamble & El mecanismo no cierra en alguna pose \\
+\hline
+Valores no finitos & Se genera NaN o infinito \\
+\hline
+Retroceso de falange medial & No monotonicidad de $\theta_{fm} > 0.5^{\circ}$ \\
+\hline
+Longitudes mínimas & Algún eslabón $\leq 5$~mm \\
+\hline
+Geometría del soporte & $F_p - 2\,d_{sp} \leq 1$~mm \\
+\hline
+Posiciones fuera de rango & Alguna coordenada $> 300$~mm \\
+\hline
+\end{tabular}
+\label{tab:restricciones}
+\end{center}
+\end{table}
 
 \section{Evaluación de las técnicas de optimización}
 Ambos algoritmos se ejecutan con la misma semilla aleatoria (42), valor
-convencional ampliamente adoptado en computación científica que garantiza la
-reproducibilidad exacta de los resultados, y el mismo número máximo de
+convencional ampliamente adoptado en estudios previos de optimización evolutiva
+que garantiza la reproducibilidad de los resultados, y el mismo número máximo de
 generaciones (300), presupuesto validado como suficiente dado que la ED registra
 su última mejora cerca de la generación 257 y el AG cerca de la generación 268,
 de modo que ambos explotan el presupuesto completo sin estancamiento prematuro.
