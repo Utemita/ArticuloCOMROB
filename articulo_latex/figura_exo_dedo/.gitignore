@@ -1,0 +1,11 @@
+# Artefactos de compilacion de LaTeX
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+compile.log
+
+# Previsualizaciones generadas
+preview_*.png
