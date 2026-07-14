@@ -17,20 +17,21 @@
 
 % ---- Interruptor: incluir la foto del dedo como fondo -----------------
 \newif\ifconfondo
-\confondofalse            % <-- cambiar a \confondotrue cuando este la foto
+\confondotrue             % \confondotrue = con foto del dedo ; \confondofalse = solo diagrama
 
 % ---- Nombre del archivo de la foto (dedo sin fondo, PNG con alfa) -----
 \newcommand{\dedoimg}{dedo_sin_fondo.png}
 
 % ---- Parametros de montaje de la foto (se ajustan al calibrar) --------
-\newcommand{\dedoancho}{22cm}     % ancho de la foto en coords del dibujo
-\newcommand{\dedox}{10.4}         % centro X de la foto
-\newcommand{\dedoy}{6.6}          % centro Y de la foto
+% Con x=y=0.62cm, el ancho en cm = (unidades deseadas) * 0.62.
+\newcommand{\dedoancho}{18.6cm}   % ~30 unidades de ancho
+\newcommand{\dedox}{14.1}         % centro X de la foto (coords del dibujo)
+\newcommand{\dedoy}{2.7}          % centro Y de la foto (coords del dibujo)
 
 % =====================================================================
 \begin{document}
 \begin{tikzpicture}[
-    scale=0.62,
+    x=0.62cm,y=0.62cm,
     esl/.style={line width=2.6pt,line cap=round,black},   % eslabon
     fal/.style={line width=3.0pt,line cap=round,black},    % falange
     cota/.style={line width=1.0pt,{Latex[length=2mm]}-{Latex[length=2mm]}},
