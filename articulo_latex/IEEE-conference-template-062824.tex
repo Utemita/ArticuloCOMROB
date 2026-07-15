@@ -14,6 +14,22 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 
+% ===== TikZ (figura del mecanismo montado sobre el dedo) =====
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,decorations.pathreplacing}
+
+% Parametros de montaje de la figura del mecanismo sobre el dedo simbolico
+\newif\ifconfondo
+\confondotrue
+\newcommand{\dedoimg}{dedo_sin_fondo.png}
+\newcommand{\dedoancho}{18.6cm}
+\newcommand{\dedox}{14.1}
+\newcommand{\dedoy}{2.7}
+\newcommand{\mecEsc}{0.72}
+\newcommand{\mecAng}{17}
+\newcommand{\mecMx}{13.0}
+\newcommand{\mecMy}{6.7}
+
 \graphicspath{{figs/}{./}}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
@@ -104,18 +120,123 @@ propaga las posiciones de la IFP y la IFD a lo largo de todo el barrido de la
 manivela. Cuando una configuración no ensambla, produce valores no finitos o
 genera un retroceso de la falange medial (no monotonicidad del ángulo de la IFD),
 la pose se marca como inviable y se descarta. La Fig.~\ref{fig:diagrama} muestra
-el esquema cinemático del mecanismo simplificado del exoesqueleto en una pose
-intermedia del recorrido: la cadena de eslabones se sitúa sobre el dorso del dedo
-y se etiquetan los parámetros de diseño. Las posiciones de las juntas provienen
-de la misma cinemática directa que evalúa el optimizador, de modo que la
-Fig.~\ref{fig:diagrama} refleja el mecanismo realmente optimizado.
+el mecanismo simplificado del exoesqueleto montado sobre un dedo simbólico: la
+cadena de eslabones $L_1$--$L_8$ se sitúa sobre el dorso del dedo, las falanges
+$F_p$ y $F_m$ se alinean con las falanges proximal y medial, y se etiquetan los
+parámetros de diseño. Las dimensiones de los eslabones representadas en la
+Fig.~\ref{fig:diagrama} corresponden al mecanismo \emph{antes de optimizar}
+(diseño de partida); la síntesis dimensional descrita en las secciones siguientes
+ajusta estas longitudes hasta las soluciones reportadas.
 
-\begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{diagrama_modelo_simplificado.pdf}}
-\caption{Esquema cinemático del mecanismo simplificado del exoesqueleto en una
-pose intermedia.}
+\begin{figure*}[t]
+\centerline{\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    x=0.62cm,y=0.62cm,
+    esl/.style={line width=2.6pt,line cap=round,black},
+    fal/.style={line width=3.0pt,line cap=round,black},
+    cota/.style={line width=1.0pt,{Latex[length=2mm]}-{Latex[length=2mm]}},
+    dbl/.style={line width=1.0pt,{Latex[length=2mm]}-{Latex[length=2mm]}},
+    ref/.style={line width=1.0pt,dashed},
+    ejeflecha/.style={line width=1.0pt,-{Latex[length=2mm]}},
+  ]
+  \ifconfondo
+    \node[anchor=center,inner sep=0pt] at (\dedox,\dedoy)
+      {\includegraphics[width=\dedoancho]{\dedoimg}};
+  \fi
+  \begin{scope}[
+      shift={($(\mecMx,\mecMy)-(13.7,3.8)$)},
+      rotate around={\mecAng:(13.7,3.8)},
+      scale around={\mecEsc:(13.7,3.8)},
+      transform shape]
+  % Coordenadas de los nodos (cadena L1-L8 sobre el dorso; falanges fijas)
+  \coordinate (A)  at (1.55, 7.10);
+  \coordinate (B)  at (6.97,11.82);
+  \coordinate (C)  at (14.53,12.06);
+  \coordinate (D)  at (19.48, 6.51);
+  \coordinate (E)  at (12.28, 9.94);
+  \coordinate (F)  at (13.7, 7.22);
+  \coordinate (G)  at (16.06, 7.34);
+  \coordinate (H)  at (8.39, 6.63);
+  \coordinate (Hf) at (8.39, 3.8);
+  \coordinate (I)  at (10.4, 6.63);
+  \coordinate (If) at (10.4, 3.8);
+  \coordinate (K)  at (5.5, 3.8);
+  \coordinate (M)  at (13.7, 3.8);
+  \coordinate (Fmp) at (2.1, 2.35);
+  % Eslabones de la cadena
+  \draw[esl] (G) -- (D);   \draw[esl] (D) -- (C);   \draw[esl] (C) -- (E);
+  \draw[esl] (E) -- (F);   \draw[esl] (E) -- (I);   \draw[esl] (B) -- (C);
+  \draw[esl] (B) -- (H);   \draw[esl] (A) -- (B);   \draw[esl] (H) -- (Hf);
+  \draw[esl] (I) -- (If);  \draw[esl] (A) -- (K);
+  \draw[fal] (K) -- (M);   \draw[fal] (K) -- (Fmp);
+  \draw[line width=1pt] (F) -- (M);
+  % Lineas de referencia
+  \draw[ref] (K) -- ($ (A)!1.14!(K) $);
+  \draw[ref] (M) -- ++(2.6,0);
+  % Juntas
+  \foreach \n in {A,B,C,D,E,F,G,H,I,K,M,Fmp,Hf,If}{
+    \filldraw[fill=white,draw=black,line width=1pt] (\n) circle (0.17);
+  }
+  % Bancadas (soportes fijos)
+  \foreach \n in {F,G,M}{
+    \begin{scope}[shift={(\n)}]
+      \draw[line width=1pt] (0,-0.17) -- (-0.34,-0.66) -- (0.34,-0.66) -- cycle;
+      \draw[line width=1pt] (-0.52,-0.66) -- (0.52,-0.66);
+      \foreach \x in {-0.40,-0.24,-0.08,0.08,0.24,0.40}{
+        \draw[line width=0.6pt] (\x,-0.66) -- (\x-0.18,-0.86);
+      }
+    \end{scope}
+  }
+  % Etiquetas
+  \tikzset{lab/.style={font=\itshape\large, fill=white, fill opacity=0.62,
+                       text opacity=1, inner sep=1pt},
+           labp/.style={font=\itshape\footnotesize, fill=white, fill opacity=0.7,
+                       text opacity=1, inner sep=0.6pt}}
+  \node[lab] at ($ (G)!0.5!(D) + (0.15,-0.55) $) {$L_1$};
+  \node[lab] at ($ (D)!0.5!(C) + (0.7,0.15) $) {$L_2$};
+  \node[lab] at ($ (C)!0.5!(E) + (0.45,-0.6) $) {$L_3$};
+  \node[lab] at ($ (B)!0.5!(C) + (0,0.55) $)   {$L_6$};
+  \node[lab] at ($ (A)!0.5!(B) + (-0.1,0.6) $) {$L_8$};
+  \node[lab] at ($ (B)!0.5!(H) + (-0.55,0.3) $){$L_7$};
+  \node[lab] at ($ (E)!0.5!(I) + (-0.6,0.25) $){$L_5$};
+  \node[lab] at ($ (E) + (-0.30,-1.45) $)      {$L_4$};
+  \node[lab] at ($ (A)!0.5!(K) + (-0.15,-0.55) $){$c_2$};
+  \node[lab] at ($ (K)!0.5!(Fmp) + (0.2,-0.55) $){$F_m$};
+  \node[labp] at ($ (K)!0.5!(Hf) + (0,-0.5) $) {$d_{sp}$};
+  \node[labp] at ($ (If)!0.5!(M) + (0,-0.5) $) {$d_{sp}$};
+  \node[lab] at ($ (Hf)!0.5!(If) + (-0.05,-0.62) $) {\itshape\large $F_p$};
+  \node[labp] at ($ (H)!0.55!(Hf) + (0.5,0) $) {$h_{sp}$};
+  \node[labp] at ($ (F)!0.5!(M) + (-1.0,0) $) {$B_2=d$};
+  % Cotas B1 y r3
+  \coordinate (b1a) at ($ (F) + (0,-1.0) $);
+  \coordinate (b1b) at (G |- b1a);
+  \draw[cota] (b1a) -- (b1b);
+  \node[labp] at ($ (b1a)!0.5!(b1b) + (0,0.28) $) {$B_1$};
+  \coordinate (r3a) at ($ (F) + (0,-1.7) $);
+  \coordinate (r3b) at ($ (r3a) + (1.05,0) $);
+  \draw[cota] (r3a) -- (r3b);
+  \node[labp] at ($ (r3a)!0.5!(r3b) + (-0.1,-0.32) $) {$r_3$};
+  % Angulos de entrada
+  \draw[line width=1pt] ($ (F) + (0.75:0) $) ++(55:0.9) arc (55:145:0.9);
+  \node[labp,anchor=east] at ($ (F) + (-0.30,1.75) $) {$\theta_{1_{inicial}}$};
+  \draw[ejeflecha] ($ (F)+(0.75,0.35) $) -- ++(0,0.7);
+  \draw[ejeflecha] ($ (F)+(0.75,0.35) $) -- ++(0.7,0);
+  \node[labp,anchor=west] at ($ (G) + (0.3,0.95) $) {$\theta_{2_{inicial}}$};
+  \draw[line width=1pt] ($ (M) + (0:1.05) $) arc (0:88:1.05);
+  \draw[ejeflecha] ($ (M) + (88:1.05) $) -- ++(0.02,0.2);
+  \node[labp,anchor=west] at ($ (M) + (1.45,0.10) $) {$\theta_{1m4B_{inicial}}$};
+  \draw[dbl] ($ (K) + (150:1.15) $) arc (150:212:1.15);
+  \node[labp,anchor=west] at ($ (K) + (0.05,0.95) $) {$\theta_{aux_{fm}}$};
+  \end{scope}
+\end{tikzpicture}%
+}}
+\caption{Mecanismo simplificado del exoesqueleto montado sobre un dedo simbólico:
+la cadena de eslabones $L_1$--$L_8$ se sitúa sobre el dorso de la mano y las
+falanges $F_p$ y $F_m$ se alinean con las falanges proximal y medial del dedo. Las
+dimensiones de los eslabones representadas corresponden al mecanismo \emph{antes de
+optimizar}.}
 \label{fig:diagrama}
-\end{figure}
+\end{figure*}
 
 \section{Formulación del problema de optimización}
 \subsection{Variables de diseño}
