@@ -34,7 +34,7 @@
 \newcommand{\mecEsc}{0.72}        % escala (eslabones/falanges mas grandes)
 \newcommand{\mecAng}{17}          % inclinacion en grados (sigue el dedo)
 \newcommand{\mecMx}{13.0}         % destino X del pivote M (base sobre el nudillo/MCP)
-\newcommand{\mecMy}{5.5}          % destino Y del pivote M (dorso)
+\newcommand{\mecMy}{5.8}          % destino Y del pivote M (un poco mas arriba, sobre el dorso)
 
 % =====================================================================
 \begin{document}
@@ -70,10 +70,10 @@
   % (1) Coordenadas de los nodos  (x derecha, y arriba)
   %     Reproducen el diagrama simplificado proporcionado.
   % -------------------------------------------------------------------
-  \coordinate (A)  at (1.8, 7.2);    % junta far-left  (L8, c2)
+  \coordinate (A)  at (3.4, 6.6);    % junta far-left  (L8, c2)  [c2 mas corta]
   \coordinate (B)  at (8.0,10.6);    % sup-izq         (L6, L7, L8)
-  \coordinate (C)  at (15.2,10.8);   % sup-der         (L6, L2, L3)
-  \coordinate (D)  at (19.6, 6.4);   % extremo der     (L1, L2)
+  \coordinate (C)  at (14.4,10.8);   % sup-der         (L6, L2, L3)  [L6 algo mas corta]
+  \coordinate (D)  at (18.6, 6.1);   % extremo der     (L1, L2)      [L1 algo mas corta]
   \coordinate (E)  at (12.5, 9.0);   % central         (L3, L4, L5)
   \coordinate (F)  at (13.7, 6.7);   % pivote tierra izq (theta1, L4)
   \coordinate (G)  at (15.7, 6.8);   % pivote tierra der (theta2, L1)
@@ -81,9 +81,9 @@
   \coordinate (Hf) at (9.2, 3.8);    % pie de h_sp
   \coordinate (I)  at (10.9, 6.2);   % base de L5
   \coordinate (If) at (10.9, 3.8);   % pie de L5
-  \coordinate (K)  at (7.0, 3.8);    % vertice theta_aux_fm (Fp-Fm-c2)
+  \coordinate (K)  at (6.0, 3.8);    % vertice theta_aux_fm (Fp-Fm-c2)  [Fp mas larga]
   \coordinate (M)  at (13.7, 3.8);   % pivote tierra inf (theta_1m4B)
-  \coordinate (Fmp) at (4.2, 2.6);   % extremo libre de Fm
+  \coordinate (Fmp) at (3.2, 2.6);   % extremo libre de Fm
 
   % -------------------------------------------------------------------
   % (2) Eslabones de la cadena
