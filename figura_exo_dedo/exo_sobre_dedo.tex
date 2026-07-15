@@ -28,6 +28,14 @@
 \newcommand{\dedox}{14.1}         % centro X de la foto (coords del dibujo)
 \newcommand{\dedoy}{2.7}          % centro Y de la foto (coords del dibujo)
 
+% ---- Transformacion del mecanismo para montarlo sobre el dorso --------
+% El pivote M (lado MCP) se mantiene fijo al escalar/rotar y luego se
+% traslada al destino (\mecMx,\mecMy). Ajustables para calibrar.
+\newcommand{\mecEsc}{0.58}        % escala (falanges mas pequenas)
+\newcommand{\mecAng}{17}          % inclinacion en grados (sigue el dedo)
+\newcommand{\mecMx}{9.4}          % destino X del pivote M (sobre la MCP)
+\newcommand{\mecMy}{5.0}          % destino Y del pivote M (dorso)
+
 % =====================================================================
 \begin{document}
 \begin{tikzpicture}[
@@ -47,6 +55,16 @@
     \node[anchor=center,inner sep=0pt] at (\dedox,\dedoy)
       {\includegraphics[width=\dedoancho]{\dedoimg}};
   \fi
+
+  % -------------------------------------------------------------------
+  % Mecanismo: escalado + inclinado + montado sobre el dorso.
+  % (shift externo mueve el pivote M; rotate/scale around lo mantienen fijo)
+  % -------------------------------------------------------------------
+  \begin{scope}[
+      shift={($(\mecMx,\mecMy)-(13.7,3.8)$)},
+      rotate around={\mecAng:(13.7,3.8)},
+      scale around={\mecEsc:(13.7,3.8)},
+      transform shape]
 
   % -------------------------------------------------------------------
   % (1) Coordenadas de los nodos  (x derecha, y arriba)
@@ -176,5 +194,6 @@
   \draw[dbl] ($ (K) + (150:1.15) $) arc (150:212:1.15);
   \node[lab,font=\itshape\normalsize,anchor=west] at ($ (K) + (0.15,1.05) $) {$\theta_{aux_{fm}}$};
 
+  \end{scope}
 \end{tikzpicture}
 \end{document}
