@@ -40,7 +40,7 @@
 \begin{document}
 \begin{tikzpicture}[
     x=0.62cm,y=0.62cm,
-    esl/.style={line width=3.3pt,line cap=round,black},   % eslabon (mas grueso)
+    esl/.style={line width=2.6pt,line cap=round,black},   % eslabon
     fal/.style={line width=3.0pt,line cap=round,black},    % falange
     cota/.style={line width=1.0pt,{Latex[length=2mm]}-{Latex[length=2mm]}},
     dbl/.style={line width=1.0pt,{Latex[length=2mm]}-{Latex[length=2mm]}},
@@ -70,20 +70,22 @@
   % (1) Coordenadas de los nodos  (x derecha, y arriba)
   %     Reproducen el diagrama simplificado proporcionado.
   % -------------------------------------------------------------------
-  \coordinate (A)  at (3.4, 6.6);    % junta far-left  (L8, c2)  [c2 mas corta]
-  \coordinate (B)  at (8.0,10.6);    % sup-izq         (L6, L7, L8)
-  \coordinate (C)  at (14.4,10.8);   % sup-der         (L6, L2, L3)  [L6 algo mas corta]
-  \coordinate (D)  at (18.6, 6.1);   % extremo der     (L1, L2)      [L1 algo mas corta]
-  \coordinate (E)  at (12.5, 9.0);   % central         (L3, L4, L5)
-  \coordinate (F)  at (13.7, 6.7);   % pivote tierra izq (theta1, L4)
-  \coordinate (G)  at (15.7, 6.8);   % pivote tierra der (theta2, L1)
-  \coordinate (H)  at (9.2, 6.2);    % base de L7
-  \coordinate (Hf) at (9.2, 3.8);    % pie de h_sp
-  \coordinate (I)  at (10.9, 6.2);   % base de L5
-  \coordinate (If) at (10.9, 3.8);   % pie de L5
-  \coordinate (K)  at (5.5, 3.8);    % vertice theta_aux_fm (Fp-Fm-c2)  [Fp un pelin mas larga]
-  \coordinate (M)  at (13.7, 3.8);   % pivote tierra inf (theta_1m4B)
-  \coordinate (Fmp) at (2.1, 2.35);  % extremo libre de Fm  [Fm un poco mas larga]
+  % Cadena (L1-L8) ampliada 1.18x respecto al pivote M (eslabones mas grandes).
+  % Las falanges (K, M, Fmp) y la posicion de montaje NO cambian.
+  \coordinate (A)  at (1.55, 7.10);  % junta far-left  (L8, c2)
+  \coordinate (B)  at (6.97,11.82);  % sup-izq         (L6, L7, L8)
+  \coordinate (C)  at (14.53,12.06); % sup-der         (L6, L2, L3)
+  \coordinate (D)  at (19.48, 6.51); % extremo der     (L1, L2)
+  \coordinate (E)  at (12.28, 9.94); % central         (L3, L4, L5)
+  \coordinate (F)  at (13.7, 7.22);  % pivote tierra izq (theta1, L4)
+  \coordinate (G)  at (16.06, 7.34); % pivote tierra der (theta2, L1)
+  \coordinate (H)  at (8.39, 6.63);  % base de L7
+  \coordinate (Hf) at (8.39, 3.8);   % pie de h_sp (vertical bajo H)
+  \coordinate (I)  at (10.4, 6.63);  % base de L5
+  \coordinate (If) at (10.4, 3.8);   % pie de L5 (vertical bajo I)
+  \coordinate (K)  at (5.5, 3.8);    % vertice theta_aux_fm (Fp-Fm-c2)  [FALANGE, fija]
+  \coordinate (M)  at (13.7, 3.8);   % pivote tierra inf (theta_1m4B)   [pivote, fijo]
+  \coordinate (Fmp) at (2.1, 2.35);  % extremo libre de Fm              [FALANGE, fija]
 
   % -------------------------------------------------------------------
   % (2) Eslabones de la cadena
@@ -117,7 +119,7 @@
   % (4) Juntas (circulos blancos)
   % -------------------------------------------------------------------
   \foreach \n in {A,B,C,D,E,F,G,H,I,K,M,Fmp,Hf,If}{
-    \filldraw[fill=white,draw=black,line width=1.1pt] (\n) circle (0.20);
+    \filldraw[fill=white,draw=black,line width=1pt] (\n) circle (0.17);
   }
 
   % -------------------------------------------------------------------
@@ -166,7 +168,7 @@
   % (7) Cotas horizontales B1 y r3 (entre pivotes a tierra)
   % -------------------------------------------------------------------
   \coordinate (b1a) at ($ (F) + (0,-1.0) $);
-  \coordinate (b1b) at (15.7,5.7);
+  \coordinate (b1b) at (G |- b1a);
   \draw[cota] (b1a) -- (b1b);
   \node[labp] at ($ (b1a)!0.5!(b1b) + (0,0.28) $) {$B_1$};
 
