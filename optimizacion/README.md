@@ -100,12 +100,49 @@ viabilidad cinematica verificada en las 120 poses.
 > fitness y evaluaciones son reproducibles gracias a las semillas fijas, aunque
 > pueden variar ligeramente segun la version de las bibliotecas.
 
+### Reproducibilidad exacta (IMPORTANTE)
+
+Los numeros reportados en el articulo se reproducen **bit a bit** solo con las
+versiones fijadas en `requirements.txt`:
+
+| Paquete | Version |
+|---------|---------|
+| numpy | 2.0.2 |
+| scipy | 1.13.1 |
+| pandas | 2.3.3 |
+| matplotlib | 3.9.4 |
+| optuna | 4.9.0 |
+
+Verificado con semilla 42 (Python 3.9 y 3.11): ED -> fitness 0.002335,
+error global 2.1736 mm, nfev 135 970; GA -> fitness 0.002720, error global
+2.5543 mm, nfev 15 052; incluidos los 16 parametros y los hiperparametros
+elegidos por Optuna.
+
+**Si obtienes numeros distintos, casi siempre es por la version de las
+bibliotecas, no por el codigo:**
+
+- **Optuna** (muestreador TPE) es la causa mas comun. Con una version distinta,
+  la MISMA semilla selecciona **hiperparametros distintos** (por ejemplo, otro
+  `popsize` o `recombination` en la ED, u otro `eta_c`/`cxpb` en el GA). Esos
+  hiperparametros alimentan la corrida profunda, de modo que el resultado final
+  cambia aunque la semilla sea identica.
+- **SciPy** fija la trayectoria de `differential_evolution`; otra version puede
+  desviar la corrida de la ED.
+- El numero de nucleos y el hardware solo afectan al **tiempo**, no a las
+  metricas (la ED usa `updating='deferred'`, determinista con `workers=-1`).
+
+Para reproducir exactamente: `pip install -r requirements.txt` en un entorno
+limpio (idealmente un `venv`) antes de correr los scripts.
+
 ---
 
 ## Como reproducir
 
 ```bash
-pip install numpy scipy pandas matplotlib optuna
+# Versiones EXACTAS con las que se generaron los numeros del articulo.
+# (Ver la nota de reproducibilidad mas abajo: cambiar de version puede
+#  alterar los resultados aunque la semilla sea la misma.)
+pip install -r requirements.txt
 
 # Modelo simplificado: comparacion ED vs GA
 python3 optimizar_simplificado_ED.py     # ED + sintonizacion Optuna
