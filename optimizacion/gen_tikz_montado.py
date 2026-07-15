@@ -1,14 +1,16 @@
 """
 gen_tikz_montado.py
 ===================
-Genera el cuerpo TikZ del mecanismo OPTIMIZADO (ED) dibujado en el estilo limpio
-de la Figura 1 y ANCLADO sobre el mismo dedo (transformacion de semejanza, sin
-reflexion, que lleva MCF e IFP a las posiciones fijas del dedo de la Fig. 1).
-Asi el mecanismo optimizado queda montado sobre el dorso, a escala, con el mismo
-aspecto que el esquema sin optimizar.
+Genera el cuerpo TikZ del mecanismo OPTIMIZADO (ED) en el estilo del diagrama de
+referencia (diagrama_modelo_simplificado.png):
+  - Bancada B1 HORIZONTAL (G1 y G2 alineados en la misma linea)
+  - B2 VERTICAL (MCF directamente debajo de G1)
+  - B1 y B2 NO se dibujan como eslabones fisicos, sino como cotas/distancias
+    con achurado de tierra
+  - Pose inicial (idx=0) para maxima legibilidad
 
-Uso: python3 gen_tikz_montado.py [idx_pose]
-Salidas: resultados/tikz_montado.tex  y  (para preview) _preview_montado.pdf
+Las posiciones de las juntas provienen de la cinematica real (pose_juntas).
+Salida: resultados/tikz_montado.tex
 """
 import os
 import sys
@@ -18,130 +20,114 @@ import modelo_simplificado as M
 HERE = os.path.dirname(os.path.abspath(__file__))
 p = np.loadtxt(os.path.join(HERE, "resultados", "parametros_simplificado_ED.txt"))
 
-# Posiciones FIJAS del dedo en el marco local de la Fig. 1 (unidades de 0.62cm)
-P_MCF = np.array([13.7, 3.8])
-P_IFP = np.array([5.5, 3.8])
+KEYS = ["MCF", "G1", "G2", "T2", "P", "M4", "S1", "S2", "IFP", "P2", "P3", "IFD"]
 
-IDX = int(sys.argv[1]) if len(sys.argv) > 1 else 47
+IDX = int(sys.argv[1]) if len(sys.argv) > 1 else 100
 th = M.theta_input
 est = M.pose_juntas(p, float(th[IDX]))
 if est is None:
     raise SystemExit("pose no ensambla")
-KEYS = ["MCF", "G1", "G2", "T2", "P", "M4", "S1", "S2", "IFP", "P2", "P3", "IFD"]
-G = {k: np.asarray(est[k], float) * 1000.0 for k in KEYS}  # mm
+G = {k: np.asarray(est[k], float) * 1000.0 for k in KEYS}
 
-# --- Semejanza (rot + escala + traslacion, SIN reflexion): MCF->P_MCF, IFP->P_IFP
-a, b = G["MCF"], G["IFP"]
-u = b - a
-U = P_IFP - P_MCF
-s = np.linalg.norm(U) / np.linalg.norm(u)
-ang = np.arctan2(U[1], U[0]) - np.arctan2(u[1], u[0])
-c_, s_ = np.cos(ang), np.sin(ang)
-Rm = s * np.array([[c_, -s_], [s_, c_]])
+# En el marco natural: G1-G2 horizontal, MCF debajo de G1.
+# Solo trasladar para que min=0
+allp = np.array([G[k] for k in KEYS])
+mn = allp.min(axis=0)
 for k in KEYS:
-    G[k] = P_MCF + Rm @ (G[k] - a)
+    G[k] = G[k] - mn
 
-# Si la cadena quedo por DEBAJO del dedo, no se puede reflejar; avisamos.
-finger_y = np.mean([G["MCF"][1], G["IFP"][1], G["IFD"][1]])
-chain_y = np.mean([G[k][1] for k in ["G1", "G2", "P", "M4", "S1", "S2", "P2", "P3"]])
-print(f"[idx {IDX}] chain_above={chain_y>finger_y}  "
-      f"bbox x[{min(G[k][0] for k in KEYS):.1f},{max(G[k][0] for k in KEYS):.1f}] "
-      f"y[{min(G[k][1] for k in KEYS):.1f},{max(G[k][1] for k in KEYS):.1f}]")
+# --- EMITIR TikZ ---
+o = []
 
+# Coordenadas
+for k in KEYS:
+    o.append(f"  \\coordinate ({k}) at ({G[k][0]:.2f},{G[k][1]:.2f});")
 
-def perp(p1, p2, d):
-    v = np.asarray(p2) - np.asarray(p1)
-    n = np.array([-v[1], v[0]]); n = n / (np.hypot(*n) + 1e-12)
-    return n * d
-
-
-def mid(x, y):
-    return (G[x] + G[y]) / 2.0
-
-
-GND = [("G1", "G2"), ("G1", "MCF")]
+# ESLABONES FISICOS (sin B1 ni B2)
 ESL = [("G2", "T2"), ("T2", "P"), ("M4", "P"), ("G1", "M4"), ("M4", "S1"),
        ("MCF", "S1"), ("IFP", "S2"), ("S1", "S2"), ("P", "P2"), ("S2", "P2"),
        ("P2", "P3")]
-
-o = []
-for k in KEYS:
-    o.append(f"  \\coordinate ({k}) at ({G[k][0]:.3f},{G[k][1]:.3f});")
-for aa, bb in GND:
-    o.append(f"  \\draw[gnd] ({aa}) -- ({bb});")
-for aa, bb in ESL:
-    o.append(f"  \\draw[esl] ({aa}) -- ({bb});")
+for a, b in ESL:
+    o.append(f"  \\draw[esl] ({a}) -- ({b});")
 o.append("  \\draw[c2s] (IFP) -- (P3);")
+
+# FALANGES
 o.append("  \\draw[fal] (MCF) -- (IFP);")
 o.append("  \\draw[fal] (IFP) -- (IFD);")
-o.append("  \\foreach \\n in {" + ",".join(KEYS) + "}{")
-o.append("    \\filldraw[fill=white,draw=black,line width=0.6pt] (\\n) circle (0.17);")
-o.append("  }")
-# soportes fijos (triangulo + achurado). Se contra-rotan -mecAng para que, tras
-# la rotacion de +17 grados del scope, queden VERTICALES (base horizontal,
-# alineados) en la pagina, como en diagrama_modelo_simplificado.png.
-MEC_ANG = 17.0
-acr = np.radians(-MEC_ANG)
-cca, ssa = np.cos(acr), np.sin(acr)
-def rr(dx, dy):
-    return (dx*cca - dy*ssa, dx*ssa + dy*cca)
-for g in ["G1", "G2", "MCF"]:
-    x, y = G[g]; sz = 0.5
-    rb1 = rr(-0.7*sz, -sz); rb2 = rr(0.7*sz, -sz)
-    b1 = (x + rb1[0], y + rb1[1]); b2 = (x + rb2[0], y + rb2[1])
-    o.append(f"  \\draw[gnd] ({x:.3f},{y:.3f}) -- ({b1[0]:.3f},{b1[1]:.3f});")
-    o.append(f"  \\draw[gnd] ({x:.3f},{y:.3f}) -- ({b2[0]:.3f},{b2[1]:.3f});")
-    o.append(f"  \\draw[gnd] ({b1[0]:.3f},{b1[1]:.3f}) -- ({b2[0]:.3f},{b2[1]:.3f});")
-    for t in np.linspace(0, 1, 5):
-        rbx = -0.7*sz + t*(1.4*sz); rby = -sz
-        p0 = rr(rbx, rby); p1 = rr(rbx - 0.28*sz, rby - 0.36*sz)
-        o.append(f"  \\draw[hatch] ({x+p0[0]:.3f},{y+p0[1]:.3f}) -- ({x+p1[0]:.3f},{y+p1[1]:.3f});")
 
-# Posiciones de etiqueta ajustadas manualmente para la pose IDX=47 (marco Fig.1)
+# JUNTAS
+o.append("  \\foreach \\n in {" + ",".join(KEYS) + "}{")
+o.append("    \\filldraw[fill=white,draw=black,line width=0.8pt] (\\n) circle (1.4);")
+o.append("  }")
+
+# BANCADA (linea horizontal con achurado) - B1 entre G1 y G2
+# y soporte en MCF (base del dedo)
+g1 = G["G1"]; g2 = G["G2"]; mcf = G["MCF"]
+# Linea base horizontal para G1 y G2
+base_y = g1[1] - 2.5  # justo debajo de los pivotes
+o.append(f"  \\draw[gnd] ({g1[0]:.2f},{base_y:.2f}) -- ({g2[0]:.2f},{base_y:.2f});")
+# Hatching debajo
+for t in np.linspace(0, 1, 8):
+    hx = g1[0] + t * (g2[0] - g1[0])
+    o.append(f"  \\draw[hatch] ({hx:.2f},{base_y:.2f}) -- ({hx - 1.5:.2f},{base_y - 2.0:.2f});")
+# Triangulos de apoyo en G1 y G2
+for pt in [g1, g2]:
+    x, y = pt
+    sz = 2.5
+    o.append(f"  \\draw[gnd] ({x:.2f},{y:.2f}) -- ({x - 0.6*sz:.2f},{base_y:.2f});")
+    o.append(f"  \\draw[gnd] ({x:.2f},{y:.2f}) -- ({x + 0.6*sz:.2f},{base_y:.2f});")
+
+# Soporte en MCF (igual que en el diagrama de referencia: triangulo hacia abajo)
+mcf_base_y = mcf[1] - 2.5
+o.append(f"  \\draw[gnd] ({mcf[0]:.2f},{mcf[1]:.2f}) -- ({mcf[0] - 1.5:.2f},{mcf_base_y:.2f});")
+o.append(f"  \\draw[gnd] ({mcf[0]:.2f},{mcf[1]:.2f}) -- ({mcf[0] + 1.5:.2f},{mcf_base_y:.2f});")
+o.append(f"  \\draw[gnd] ({mcf[0] - 1.5:.2f},{mcf_base_y:.2f}) -- ({mcf[0] + 1.5:.2f},{mcf_base_y:.2f});")
+for t in np.linspace(0, 1, 4):
+    hx = (mcf[0] - 1.5) + t * 3.0
+    o.append(f"  \\draw[hatch] ({hx:.2f},{mcf_base_y:.2f}) -- ({hx - 1.2:.2f},{mcf_base_y - 1.6:.2f});")
+
+
+# --- ETIQUETAS ---
+def mid(a, b):
+    return (G[a] + G[b]) / 2.0
+
+def perp(a, b, d):
+    v = G[b] - G[a]
+    n = np.array([-v[1], v[0]]); n = n / (np.hypot(*n) + 1e-12)
+    return n * d
+
+LB = 4.5  # offset para etiquetas
 labels = [
-    (r"$L_1$", (23.4, -1.1), "lab"),
-    (r"$L_2$", (22.5, 1.3), "lab"),
-    (r"$L_3$", (19.2, 2.7), "labp"),
-    (r"$L_4$", (17.6, 6.5), "labp"),
-    (r"$L_5$", (13.4, 6.2), "lab"),
-    (r"$L_6$", (15.6, 7.6), "lab"),
-    (r"$L_7$", (8.9, 8.0), "lab"),
-    (r"$L_8$", (5.6, 7.4), "lab"),
-    (r"$c_2$", (2.7, 5.4), "lab"),
-    (r"$B_1$", (21.8, 2.3), "labp"),
-    (r"$B_2$", (15.2, 5.2), "labp"),
-    (r"$h_{sp}$", (4.9, 5.2), "labp"),
-    (r"$F_p$", (9.6, 3.05), "lab"),
-    (r"$F_m$", (3.2, 2.4), "lab"),
+    (r"$L_1$", mid("G2", "T2") + np.array([3, 4])),
+    (r"$L_2$", mid("T2", "P") + np.array([6, 0])),
+    (r"$L_3$", mid("M4", "P") + np.array([5, -3])),
+    (r"$L_4$", mid("G1", "M4") + np.array([-6, 0])),
+    (r"$L_5$", mid("M4", "S1") + np.array([-6, 0])),
+    (r"$L_6$", mid("P", "P2") + np.array([-6, 3])),
+    (r"$L_7$", mid("S2", "P2") + np.array([-6, 0])),
+    (r"$L_8$", mid("P2", "P3") + np.array([-6, 0])),
+    (r"$c_2$", mid("IFP", "P3") + np.array([-6, 0])),
+    (r"$F_p$", mid("MCF", "IFP") + np.array([5, -5])),
+    (r"$F_m$", mid("IFP", "IFD") + np.array([5, -4])),
+    (r"$h_{sp}$", mid("S1", "S2") + np.array([6, 0])),
+    (r"$d_{sp}$", G["MCF"] + np.array([7, -5])),
 ]
-for txt, pos, sty in labels:
-    o.append(f"  \\node[{sty}] at ({pos[0]:.3f},{pos[1]:.3f}) {{{txt}}};")
+for txt, pos in labels:
+    o.append(f"  \\node[lab] at ({pos[0]:.2f},{pos[1]:.2f}) {{{txt}}};")
+
+# Cotas B1 y B2 (flechas de dimension, no eslabones)
+# B1: flecha horizontal debajo de la bancada
+b1_y = base_y - 5.0
+o.append(f"  \\draw[cota] ({g1[0]:.2f},{b1_y:.2f}) -- ({g2[0]:.2f},{b1_y:.2f});")
+o.append(f"  \\node[labp,below] at ({(g1[0]+g2[0])/2:.2f},{b1_y:.2f}) {{$B_1$}};")
+# B2: flecha vertical a la izquierda
+b2_x = g1[0] - 5.0
+o.append(f"  \\draw[cota] ({b2_x:.2f},{g1[1]:.2f}) -- ({b2_x:.2f},{mcf[1]:.2f});")
+o.append(f"  \\node[labp,left] at ({b2_x:.2f},{(g1[1]+mcf[1])/2:.2f}) {{$B_2$}};")
 
 body = "\n".join(o)
-with open(os.path.join(HERE, "resultados", "tikz_montado.tex"), "w") as f:
+outf = os.path.join(HERE, "resultados", "tikz_montado.tex")
+with open(outf, "w") as f:
     f.write(body + "\n")
-
-# standalone para preview (con imagen del dedo y mismo scope que la Fig.1)
-pre = r"""\documentclass[border=3pt]{standalone}
-\usepackage{amsmath}\usepackage{graphicx}\usepackage{tikz}
-\usetikzlibrary{arrows.meta,calc}
-\graphicspath{{../../articulo_latex/figs/}}
-\begin{document}
-\begin{tikzpicture}[x=0.62cm,y=0.62cm,
-  esl/.style={line width=1.3pt,line cap=round,black},
-  fal/.style={line width=2.6pt,line cap=round,black},
-  gnd/.style={line width=1.0pt,black},
-  hatch/.style={line width=0.6pt,black},
-  c2s/.style={line width=0.9pt,dash pattern=on 3pt off 2pt},
-  lab/.style={font=\itshape\large,fill=white,fill opacity=0.62,text opacity=1,inner sep=1pt},
-  labp/.style={font=\itshape\footnotesize,fill=white,fill opacity=0.7,text opacity=1,inner sep=0.6pt}]
-  \node[anchor=center,inner sep=0pt] at (14.1,2.7){\includegraphics[width=18.6cm]{dedo_sin_fondo.png}};
-  \begin{scope}[shift={($(13.0,6.7)-(13.7,3.8)$)},rotate around={17:(13.7,3.8)},scale around={0.72:(13.7,3.8)},transform shape]
-  \input{tikz_montado.tex}
-  \end{scope}
-\end{tikzpicture}
-\end{document}
-"""
-with open(os.path.join(HERE, "resultados", "_preview_montado.tex"), "w") as f:
-    f.write(pre)
-print(">> escrito tikz_montado.tex y _preview_montado.tex")
+print(f">> escrito: {outf}")
+print(f">> bbox: w={allp[:,0].max()-allp[:,0].min():.0f} x h={allp[:,1].max()-allp[:,1].min():.0f} mm")
