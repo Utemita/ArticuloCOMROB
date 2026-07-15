@@ -40,7 +40,7 @@
 \begin{document}
 \begin{tikzpicture}[
     x=0.62cm,y=0.62cm,
-    esl/.style={line width=2.6pt,line cap=round,black},   % eslabon
+    esl/.style={line width=3.3pt,line cap=round,black},   % eslabon (mas grueso)
     fal/.style={line width=3.0pt,line cap=round,black},    % falange
     cota/.style={line width=1.0pt,{Latex[length=2mm]}-{Latex[length=2mm]}},
     dbl/.style={line width=1.0pt,{Latex[length=2mm]}-{Latex[length=2mm]}},
@@ -117,7 +117,7 @@
   % (4) Juntas (circulos blancos)
   % -------------------------------------------------------------------
   \foreach \n in {A,B,C,D,E,F,G,H,I,K,M,Fmp,Hf,If}{
-    \filldraw[fill=white,draw=black,line width=1pt] (\n) circle (0.17);
+    \filldraw[fill=white,draw=black,line width=1.1pt] (\n) circle (0.20);
   }
 
   % -------------------------------------------------------------------
