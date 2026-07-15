@@ -1,0 +1,82 @@
+\section{Introducción}
+\IEEEPARstart{L}{OS} exoesqueletos de mano son dispositivos robóticos de asistencia y
+rehabilitación cuya función es acompañar o ayudar a recuperar el movimiento de
+los dedos \cite{ref_exo_review}. Para que la asistencia resulte cómoda y segura,
+el mecanismo debe reproducir con fidelidad las trayectorias articulares naturales
+del dedo a lo largo de todo el rango de flexión; de lo contrario, aparecen
+fuerzas de reacción indeseadas en las articulaciones y el dispositivo deja de ser
+cómodo para el usuario \cite{ref_fourbar_nat}. Lograr ese seguimiento depende en
+gran medida de elegir correctamente las longitudes de los eslabones del
+mecanismo, un problema que se conoce como \emph{síntesis dimensional}
+\cite{ref_de_fourbar}.
+
+La síntesis dimensional para generación de trayectoria es un problema de
+optimización difícil: el espacio de soluciones contiene amplias regiones en las
+que el mecanismo simplemente no ensambla o invierte su movimiento, y la relación
+entre las longitudes de los eslabones y la curva que describe el mecanismo es no
+lineal y presenta muchos óptimos locales. Por ello, los métodos clásicos basados
+en gradiente suelen quedar atrapados en soluciones subóptimas, lo que motiva el
+empleo de metaheurísticas poblacionales como la Evolución Diferencial (ED) y los
+Algoritmos Genéticos (AG), capaces de recorrer el espacio de búsqueda sin
+necesitar información de derivadas \cite{ref_de_fourbar,ref_tlbo}.
+
+Aunque ambas técnicas de optimización se usan ampliamente, cuál de las dos
+resulta más eficaz depende de la naturaleza del problema, de cómo se representan
+las variables y del ajuste de los hiperparámetros
+\cite{ref_ga_pso_de,ref_de_vs_ga}. La elección entre uno u otro rara vez es
+evidente y casi siempre requiere ponerlos a prueba sobre el caso concreto que se
+quiere resolver.
+
+La síntesis dimensional de eslabonamientos para generación de trayectoria se ha
+abordado históricamente con métodos analíticos y, más recientemente, con
+metaheurísticas que evitan las limitaciones de los enfoques basados en gradiente
+sobre funciones no convexas y discontinuas \cite{ref_de_fourbar,ref_tlbo}. Los
+mecanismos de cuatro barras son un bloque de construcción recurrente tanto en
+síntesis de trayectoria como en exoesqueletos de dedo, por su simplicidad y su
+capacidad de aproximar curvas de acoplador complejas con pocos parámetros
+\cite{ref_fourbar_nat,ref_exo_stephenson}. Cuando se encadenan varias etapas de
+cuatro y cinco barras, el número de variables crece y el espacio de búsqueda se
+vuelve fuertemente multimodal, lo que hace inevitable el uso de técnicas de
+optimización global.
+
+En el ámbito de los exoesqueletos de mano, diversos trabajos recientes emplean
+optimización basada en enjambres o evolutiva para sintonizar las dimensiones de
+mecanismos que reproducen la flexión natural de los dedos
+\cite{ref_exo_review,ref_exo_stephenson}. La elección del algoritmo, sin
+embargo, rara vez se justifica de forma empírica sobre el mecanismo concreto. La
+comparación directa entre familias de algoritmos también ha sido estudiada: en
+problemas de dominio continuo, la ED y la optimización por enjambre de partículas
+tienden a comportarse de forma más natural que el AG, concebido originalmente
+para representaciones discretas \cite{ref_ga_pso_de,ref_de_vs_ga}. No obstante,
+el resultado de la comparación depende de la codificación, de los operadores y
+del ajuste de hiperparámetros, por lo que sigue siendo necesario caracterizar el
+comportamiento sobre instancias reales \cite{ref_de_survey,ref_de_sade}.
+
+A diferencia de esos trabajos, aquí se fija un mismo planteamiento, función
+objetivo y número de generaciones para ambos algoritmos sobre un mecanismo de
+exoesqueleto real, y se evalúa no sólo el error de ajuste sino también la
+coherencia y la compacidad del mecanismo resultante, dos aspectos determinantes
+para su posterior fabricación.
+
+En este trabajo se emplean ambos algoritmos en igualdad de condiciones, es decir,
+partiendo del mismo planteamiento, la misma función objetivo y el mismo número de
+generaciones, de modo que cualquier diferencia en el resultado se deba al
+algoritmo y no a cómo se montó el experimento. Esto con el objetivo de determinar
+la mejor técnica para resolver mecanismos planos.
+
+Para que la comparación sea reproducible, se optimiza una versión \emph{parcial}
+del mecanismo, que reproduce el movimiento hasta la falange medial (articulación
+IFD). Este caso es más pequeño que el modelo completo de tres falanges, pero
+conserva las dificultades esenciales del problema (el acoplamiento entre etapas,
+las restricciones de ensamble y la necesidad de que el movimiento no retroceda),
+lo que permite estudiar el efecto del algoritmo de optimización sin
+la complejidad añadida del modelo completo.
+
+\subsection{Contribuciones}
+Las contribuciones de este artículo son: (i) una formulación del
+problema de síntesis dimensional parcial con 16 parámetros, función objetivo
+basada en la distancia de Chamfer ponderada y penalizaciones de viabilidad;
+(ii) una comparación controlada de ED y AG bajo condiciones idénticas, que
+evalúa no sólo el error de ajuste sino también la coherencia y la compacidad del
+mecanismo resultante; y (iii) un análisis de las razones por las que la ED
+conserva una ligera ventaja en este problema de variables continuas.

@@ -1,0 +1,26 @@
+# Parametros optimizados (21) - Modelo COMPLETO (3 falanges, 5 mecanismos) - EVOLUCION DIFERENCIAL
+# Indices 0-16: mecanismo base; 17=Link9_3, 18=Link10_3, 19=back3_3, 20=up3_3 (tercer 4 barras IFD/DIP)
+# fitness=0.003821  err_global_mm=3.3893  err_ifp_mm=4.2104  err_ifd_mm=1.8565  err_tip_mm=4.1011  rom_dip_deg=30.18  tiempo_s=563.0  nfev=381534
+# HIPERPARAMETROS (Optuna): strategy=best1bin  popsize=30  mutation_low=0.4755  mutation_high=0.8137  recombination=0.7897  optuna_trials=25  tiempo_tune_s=782.4
+# Bancada1 (m) | Bancada2 (m) | Link1 (m) | Link2 (m) | Link3 (m) | Link4 (m) | Link5 (m) | Link6 (m) | Link7 (m) | Link8 (m) | Link10 / c2 (m) | hsp (m) | dsp (m) | Theta Aux FM (rad) | Theta Aux FD (rad) | Relacion de engranaje | Theta Offset (rad) | Link9_3 acoplador (m) | Link10_3 balancin (m) | back3_3 soporte (m) | up3_3 standoff (m)
+1.701088082958650272e-02
+3.827407111288666508e-02
+1.415869058476124792e-02
+5.817745626396997327e-02
+2.451587028829962933e-02
+2.431394747611510809e-02
+2.272007391251072705e-02
+5.189392199814284873e-02
+3.125511221242245619e-02
+5.597935768319749206e-02
+3.337185457258705357e-02
+1.136513810822367340e-02
+6.496702265248098691e-03
+6.950347089186499350e-01
+9.051856249190447512e-01
+3.264970519267199833e+00
+-1.446478067487513064e+00
+4.028825370349226054e-02
+2.046560906125409474e-02
+-2.708833356709973786e-02
+1.095815963696970124e-02
