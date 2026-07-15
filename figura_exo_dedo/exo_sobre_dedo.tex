@@ -31,10 +31,10 @@
 % ---- Transformacion del mecanismo para montarlo sobre el dorso --------
 % El pivote M (lado MCP) se mantiene fijo al escalar/rotar y luego se
 % traslada al destino (\mecMx,\mecMy). Ajustables para calibrar.
-\newcommand{\mecEsc}{0.58}        % escala (falanges mas pequenas)
+\newcommand{\mecEsc}{0.72}        % escala (eslabones/falanges mas grandes)
 \newcommand{\mecAng}{17}          % inclinacion en grados (sigue el dedo)
-\newcommand{\mecMx}{9.4}          % destino X del pivote M (sobre la MCP)
-\newcommand{\mecMy}{5.0}          % destino Y del pivote M (dorso)
+\newcommand{\mecMx}{11.0}         % destino X del pivote M (mas atras, sobre el dorso)
+\newcommand{\mecMy}{5.7}          % destino Y del pivote M (dorso)
 
 % =====================================================================
 \begin{document}
@@ -136,10 +136,13 @@
   % -------------------------------------------------------------------
   % (6) Etiquetas de eslabones
   % -------------------------------------------------------------------
-  \tikzset{lab/.style={font=\itshape\large}}
-  \node[lab] at ($ (G)!0.5!(D) + (0.1,-0.6) $) {$L_1$};
+  \tikzset{lab/.style={font=\itshape\large, fill=white, fill opacity=0.62,
+                       text opacity=1, inner sep=1pt},
+           labp/.style={font=\itshape\footnotesize, fill=white, fill opacity=0.7,
+                       text opacity=1, inner sep=0.6pt}}
+  \node[lab] at ($ (G)!0.5!(D) + (0.15,-0.55) $) {$L_1$};
   \node[lab] at ($ (D)!0.5!(C) + (0.7,0.15) $) {$L_2$};
-  \node[lab] at ($ (C)!0.5!(E) + (0.7,0.35) $) {$L_3$};
+  \node[lab] at ($ (C)!0.5!(E) + (0.45,-0.6) $) {$L_3$};
   \node[lab] at ($ (B)!0.5!(C) + (0,0.55) $)   {$L_6$};
   \node[lab] at ($ (A)!0.5!(B) + (-0.1,0.6) $) {$L_8$};
   \node[lab] at ($ (B)!0.5!(H) + (-0.55,0.3) $){$L_7$};
@@ -149,15 +152,15 @@
   \node[lab] at ($ (K)!0.5!(Fmp) + (0.2,-0.55) $){$F_m$};
 
   % Fp y d_sp sobre la falange proximal
-  \node[lab] at ($ (K)!0.55!(Hf) + (0,-0.58) $) {$d_{sp}$};
-  \node[lab] at ($ (If)!0.5!(M) + (0,-0.58) $) {$d_{sp}$};
-  \node[lab] at ($ (Hf)!0.5!(If) + (-0.05,-0.7) $) {\itshape\LARGE $F_p$};
+  \node[labp] at ($ (K)!0.5!(Hf) + (0,-0.5) $) {$d_{sp}$};
+  \node[labp] at ($ (If)!0.5!(M) + (0,-0.5) $) {$d_{sp}$};
+  \node[lab] at ($ (Hf)!0.5!(If) + (-0.05,-0.62) $) {\itshape\large $F_p$};
 
   % h_sp junto a la vertical de L7
-  \node[lab] at ($ (H)!0.5!(Hf) + (0.6,0) $) {$h_{sp}$};
+  \node[labp] at ($ (H)!0.55!(Hf) + (0.5,0) $) {$h_{sp}$};
 
   % B2 = d (cota vertical, a la izquierda de la linea F-M)
-  \node[lab] at ($ (F)!0.5!(M) + (-1.15,0) $) {$B_2=d$};
+  \node[labp] at ($ (F)!0.5!(M) + (-1.0,0) $) {$B_2=d$};
 
   % -------------------------------------------------------------------
   % (7) Cotas horizontales B1 y r3 (entre pivotes a tierra)
@@ -165,34 +168,34 @@
   \coordinate (b1a) at ($ (F) + (0,-1.0) $);
   \coordinate (b1b) at (15.7,5.7);
   \draw[cota] (b1a) -- (b1b);
-  \node[lab] at ($ (b1a)!0.5!(b1b) + (0,0.32) $) {$B_1$};
+  \node[labp] at ($ (b1a)!0.5!(b1b) + (0,0.28) $) {$B_1$};
 
   \coordinate (r3a) at ($ (F) + (0,-1.7) $);
   \coordinate (r3b) at ($ (r3a) + (1.05,0) $);
   \draw[cota] (r3a) -- (r3b);
-  \node[lab] at ($ (r3a)!0.5!(r3b) + (-0.15,-0.38) $) {$r_3$};
+  \node[labp] at ($ (r3a)!0.5!(r3b) + (-0.1,-0.32) $) {$r_3$};
 
   % -------------------------------------------------------------------
   % (8) Angulos de entrada y marco de referencia local
   % -------------------------------------------------------------------
   % theta_1_inicial en F (arco + flecha)
   \draw[line width=1pt] ($ (F) + (0.75:0) $) ++(55:0.9) arc (55:145:0.9);
-  \node[lab,font=\itshape\normalsize] at ($ (F) + (0.1,1.25) $) {$\theta_{1_{inicial}}$};
+  \node[labp,anchor=east] at ($ (F) + (-0.30,1.75) $) {$\theta_{1_{inicial}}$};
   % marco de referencia local (x,y) junto a theta_1
   \draw[ejeflecha] ($ (F)+(0.75,0.35) $) -- ++(0,0.7);
   \draw[ejeflecha] ($ (F)+(0.75,0.35) $) -- ++(0.7,0);
 
   % theta_2_inicial en G
-  \node[lab,font=\itshape\normalsize,anchor=west] at ($ (G) + (0.3,0.8) $) {$\theta_{2_{inicial}}$};
+  \node[labp,anchor=west] at ($ (G) + (0.3,0.95) $) {$\theta_{2_{inicial}}$};
 
   % theta_1m4B_inicial en M (arco desde la horizontal punteada hacia F)
   \draw[line width=1pt] ($ (M) + (0:1.05) $) arc (0:88:1.05);
   \draw[ejeflecha] ($ (M) + (88:1.05) $) -- ++(0.02,0.2);
-  \node[lab,font=\itshape\normalsize,anchor=west] at ($ (M) + (1.55,0.42) $) {$\theta_{1m4B_{inicial}}$};
+  \node[labp,anchor=west] at ($ (M) + (1.45,0.10) $) {$\theta_{1m4B_{inicial}}$};
 
   % theta_aux_fm en K (arco de doble punta entre ref c2 y Fm)
   \draw[dbl] ($ (K) + (150:1.15) $) arc (150:212:1.15);
-  \node[lab,font=\itshape\normalsize,anchor=west] at ($ (K) + (0.15,1.05) $) {$\theta_{aux_{fm}}$};
+  \node[labp,anchor=west] at ($ (K) + (0.05,0.95) $) {$\theta_{aux_{fm}}$};
 
   \end{scope}
 \end{tikzpicture}
