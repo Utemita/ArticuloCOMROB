@@ -77,16 +77,25 @@ o.append("  \\draw[fal] (IFP) -- (IFD);")
 o.append("  \\foreach \\n in {" + ",".join(KEYS) + "}{")
 o.append("    \\filldraw[fill=white,draw=black,line width=0.6pt] (\\n) circle (0.17);")
 o.append("  }")
-# soportes fijos (triangulo + achurado) apuntando hacia -y local
+# soportes fijos (triangulo + achurado). Se contra-rotan -mecAng para que, tras
+# la rotacion de +17 grados del scope, queden VERTICALES (base horizontal,
+# alineados) en la pagina, como en diagrama_modelo_simplificado.png.
+MEC_ANG = 17.0
+acr = np.radians(-MEC_ANG)
+cca, ssa = np.cos(acr), np.sin(acr)
+def rr(dx, dy):
+    return (dx*cca - dy*ssa, dx*ssa + dy*cca)
 for g in ["G1", "G2", "MCF"]:
     x, y = G[g]; sz = 0.5
-    b1 = (x - 0.7*sz, y - sz); b2 = (x + 0.7*sz, y - sz)
+    rb1 = rr(-0.7*sz, -sz); rb2 = rr(0.7*sz, -sz)
+    b1 = (x + rb1[0], y + rb1[1]); b2 = (x + rb2[0], y + rb2[1])
     o.append(f"  \\draw[gnd] ({x:.3f},{y:.3f}) -- ({b1[0]:.3f},{b1[1]:.3f});")
     o.append(f"  \\draw[gnd] ({x:.3f},{y:.3f}) -- ({b2[0]:.3f},{b2[1]:.3f});")
     o.append(f"  \\draw[gnd] ({b1[0]:.3f},{b1[1]:.3f}) -- ({b2[0]:.3f},{b2[1]:.3f});")
     for t in np.linspace(0, 1, 5):
-        hx = b1[0] + (b2[0]-b1[0])*t
-        o.append(f"  \\draw[hatch] ({hx:.3f},{b1[1]:.3f}) -- ({hx-0.28*sz:.3f},{b1[1]-0.36*sz:.3f});")
+        rbx = -0.7*sz + t*(1.4*sz); rby = -sz
+        p0 = rr(rbx, rby); p1 = rr(rbx - 0.28*sz, rby - 0.36*sz)
+        o.append(f"  \\draw[hatch] ({x+p0[0]:.3f},{y+p0[1]:.3f}) -- ({x+p1[0]:.3f},{y+p1[1]:.3f});")
 
 # Posiciones de etiqueta ajustadas manualmente para la pose IDX=47 (marco Fig.1)
 labels = [
