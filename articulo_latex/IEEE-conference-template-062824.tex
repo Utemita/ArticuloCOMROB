@@ -18,8 +18,10 @@
 % ===== Numeros de pagina alternados (impar derecha, par izquierda) =====
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[R]{\ifodd\value{page}\thepage\fi}
-\fancyhead[L]{\ifodd\value{page}\else\thepage\fi}
+% Numero de pagina a ~7pt (como en el IEEEtran_HOWTO), un poco mas abajo
+\newcommand{\pnum}{\raisebox{-6pt}[0pt][0pt]{\normalfont\fontsize{7}{8}\selectfont\thepage}}
+\fancyhead[R]{\ifodd\value{page}\pnum\fi}
+\fancyhead[L]{\ifodd\value{page}\else\pnum\fi}
 \renewcommand{\headrulewidth}{0pt}
 
 % ===== Letra capital inicial (IEEEPARstart) en NEGRITA =====
