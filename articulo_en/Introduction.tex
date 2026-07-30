@@ -1,0 +1,77 @@
+\section{Introduction}
+\IEEEPARstart{H}{AND} exoskeletons are robotic assistance and rehabilitation
+devices whose function is to accompany or help recover the movement of the
+fingers \cite{ref_exo_review}. For the assistance to be comfortable and safe,
+the mechanism must faithfully reproduce the natural joint trajectories of the
+finger over the whole flexion range; otherwise, unwanted reaction forces appear
+at the joints and the device stops being comfortable for the user
+\cite{ref_fourbar_nat}. Achieving that tracking depends largely on correctly
+choosing the link lengths of the mechanism, a problem known as
+\emph{dimensional synthesis} \cite{ref_de_fourbar}.
+
+Dimensional synthesis for path generation is a hard optimization problem: the
+solution space contains large regions where the mechanism simply does not
+assemble or reverses its motion, and the relation between the link lengths and
+the curve described by the mechanism is nonlinear and has many local optima. For
+this reason, classical gradient-based methods tend to get trapped in suboptimal
+solutions, which motivates the use of population-based metaheuristics such as
+Differential Evolution (DE) and Genetic Algorithms (GA), which can traverse the
+search space without needing derivative information
+\cite{ref_de_fourbar,ref_tlbo}.
+
+Although both optimization techniques are widely used, their effectiveness
+depends on the nature of the problem, on how the variables are represented and on
+the tuning of the hyperparameters \cite{ref_ga_pso_de,ref_de_vs_ga}. The choice
+between one or the other is rarely obvious and almost always requires testing
+them on the specific case to be solved.
+
+Dimensional synthesis of linkages for path generation has historically been
+addressed with analytical methods and, more recently, with metaheuristics that
+avoid the limitations of gradient-based approaches on nonconvex and discontinuous
+functions \cite{ref_de_fourbar,ref_tlbo}. Four-bar mechanisms are a recurring
+building block both in path synthesis and in finger exoskeletons, due to their
+simplicity and their ability to approximate complex coupler curves with few
+parameters \cite{ref_fourbar_nat,ref_exo_stephenson}. When several four- and
+five-bar stages are chained, the number of variables grows and the search space
+becomes strongly multimodal, which makes the use of global optimization
+techniques unavoidable.
+
+In the field of hand exoskeletons, several recent works use swarm-based or
+evolutionary optimization to tune the dimensions of mechanisms that reproduce the
+natural flexion of the fingers \cite{ref_exo_review,ref_exo_stephenson}. The
+choice of algorithm, however, is rarely justified empirically on the specific
+mechanism. The direct comparison between families of algorithms has also been
+studied: in continuous-domain problems, DE and particle swarm optimization tend
+to behave more naturally than the GA, which was originally conceived for discrete
+representations \cite{ref_ga_pso_de,ref_de_vs_ga}. Nevertheless, the outcome of
+the comparison depends on the encoding, on the operators and on the tuning of
+hyperparameters, so it remains necessary to characterize the behavior on real
+instances \cite{ref_de_survey,ref_de_sade}.
+
+Unlike those works, here the same formulation, objective function and number of
+generations are fixed for both algorithms on a real exoskeleton mechanism, and
+not only the fitting error is evaluated but also the coherence and compactness of
+the resulting mechanism, two aspects that are decisive for its later manufacture.
+
+In this work both algorithms are used under equal conditions, that is, starting
+from the same formulation, the same objective function and the same number of
+generations, so that any difference in the result is due to the algorithm and not
+to how the experiment was set up. This with the aim of determining the best
+technique to synthesize planar mechanisms.
+
+For the comparison to be reproducible, a \emph{partial} version of the mechanism
+is optimized, which generates the movement up to the medial phalanx (PIP joint).
+This case is smaller than the full three-phalanx model, but it keeps the
+essential difficulties of the problem (the coupling between stages, the assembly
+constraints and the need for the movement not to reverse), which makes it
+possible to study the effect of the optimization algorithm without the added
+complexity of the full model.
+
+\subsection{Contributions}
+The contributions of this article are: (i) a formulation of the partial
+dimensional synthesis problem with 16 parameters, an objective function based on
+the weighted Chamfer distance and feasibility penalties; (ii) a controlled
+comparison of DE and GA under identical conditions, which evaluates not only the
+fitting error but also the coherence and compactness of the resulting mechanism;
+and (iii) an analysis of the reasons why DE keeps a slight advantage in this
+continuous-variable problem.
