@@ -15,6 +15,13 @@
 \usepackage{xcolor}
 \usepackage{fancyhdr}
 
+% ===== Evitar la division de palabras con guion al final de linea =====
+% Desactiva la separacion silabica automatica; el texto sigue justificado.
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\tolerance=2000
+\emergencystretch=3em
+
 % ===== Numeros de pagina alternados (impar derecha, par izquierda) =====
 \pagestyle{fancy}
 \fancyhf{}

@@ -15,6 +15,13 @@
 \usepackage{xcolor}
 \usepackage{fancyhdr}
 
+% ===== Avoid breaking words with a hyphen at the end of a line =====
+% Disables automatic hyphenation; the text remains justified.
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\tolerance=2000
+\emergencystretch=3em
+
 % ===== Alternating page numbers (odd right, even left) =====
 \pagestyle{fancy}
 \fancyhf{}
