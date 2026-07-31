@@ -97,7 +97,7 @@ exoskeleton, dimensional optimization, mechanism chain.
 \input{Introduction}
 
 \section{Description of the Exoskeleton Mechanisms}
-To the original model [] a third four-bar stage is added, in order to correct
+To the original model \cite{ref_palma} a third four-bar stage is added, in order to correct
 tracking problems that it presents at the DIP joint. Since in this work the
 partial optimization of the chain is carried out, the third four-bar mechanism is
 omitted. The present study focuses on the dimensional optimization of the
@@ -133,8 +133,8 @@ measurements of a real human finger: proximal phalanx $L_{FP}=49$~mm, medial
 phalanx $L_{FM}=26$~mm and distal phalanx $L_{FD}=24$~mm (the latter only in the
 full model). Given a crank position $\theta_2$, the input of the first stage is
 obtained through a gear ratio $r_g$ and an offset $\theta_{\text{off}}$ as
-$\theta_1=\theta_2/r_g+\theta_{\text{off}}$. The direct kinematics sequentially
-solves the four-bar loops and propagates the positions of the PIP and the DIP
+$\theta_1=\theta_2/r_g+\theta_{\text{off}}$. The direct kinematics (reported with
+detail in \cite{ref_palma}) sequentially solves the four-bar loops and propagates the positions of the PIP and the DIP
 along the whole crank sweep. When a configuration does not assemble, produces
 non-finite values or generates a reversal of the medial phalanx (non-monotonicity
 of the DIP angle), the pose is marked as infeasible and discarded.
