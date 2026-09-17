@@ -76,9 +76,16 @@ Optuna y restricciones) en el reporte
 ## Tercera etapa para la falange distal
 
 Al modelo original se le **agrego una TERCERA ETAPA de mecanismo** para dar
-movimiento a la **falange DISTAL respecto de la PROXIMAL/medial**, y esa tercera
-etapa se **incorporo al analisis cinematico** (queda dentro del barrido y de la
-funcion objetivo del modelo completo).
+movimiento a la **falange distal respecto de la proximal** (segun la indicacion
+del usuario), y esa tercera etapa se **incorporo al analisis cinematico** (queda
+dentro del barrido y de la funcion objetivo del modelo completo).
+
+> **Aclaracion anatomica (no proviene del usuario):** en la anatomia del dedo, la
+> falange distal articula directamente con la falange media (o medial) a traves
+> de la articulacion interfalangica distal (DIP/IFD). Se deja constancia de esta
+> precision como aclaracion separada, sin sustituir la frase del usuario
+> ("respecto a la proximal"). Confirmar con el usuario la referencia anatomica que
+> debe quedar en la redaccion final de la tesis.
 
 En el codigo (`modelo_completo.py`, seccion "TERCER MECANISMO DE 4 BARRAS") esta
 tercera etapa se implementa como un mecanismo de **cuatro barras**:
