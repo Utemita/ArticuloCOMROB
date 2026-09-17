@@ -1,0 +1,123 @@
+================================================================================
+OPTIMIZACION PARCIAL (ESPANOL) - Modelo simplificado hasta la falange medial
+================================================================================
+
+PROPOSITO
+--------------------------------------------------------------------------------
+Esta carpeta contiene la comparacion simetrica entre dos metaheuristicas,
+Evolucion Diferencial (ED) y Algoritmo Genetico (GA), sobre el MODELO
+SIMPLIFICADO del exoesqueleto de dedo. El modelo simplificado tiene 16
+parametros y cubre la cinematica hasta la falange medial (articulaciones MCP e
+IFP). Ambos optimizadores minimizan la MISMA funcion objetivo y sintonizan sus
+hiperparametros con Optuna, de modo que la comparacion ED vs GA sea justa.
+
+La funcion objetivo combina:
+  - Distancia de Chamfer ponderada por articulacion (IFP con peso 0.40, IFD con
+    peso 0.60), que mide la similitud de forma entre la trayectoria del
+    exoesqueleto y la trayectoria del mocap.
+  - Alineacion rigida optima tipo Kabsch/Procrustes antes de medir el error.
+  - Penalizacion de monotonicidad (W_MONO = 5.0) para que el movimiento avance
+    de forma coherente sin retrocesos artificiales.
+  - Regularizacion suave de dimensiones y variables auxiliares.
+  - Penalizacion fija de 1000 para los mecanismos que no ensamblan.
+
+Es la carpeta que decide el ganador (ED) que luego se usa en el modelo completo.
+
+CONTENIDO Y QUE HACE CADA SCRIPT
+--------------------------------------------------------------------------------
+comun.py
+    Utilidades compartidas: carga del mocap (cargar_mocap), distancia de Chamfer
+    (chamfer_distance), alineacion rigida optima (optimal_rigid_transform /
+    apply_transform), penalizacion de monotonicidad (monotonicity_penalty),
+    solucionadores de mecanismos (sol_5_barras, solve_four_bar,
+    circle_intersections) y el algoritmo genetico (algoritmo_genetico).
+
+modelo_simplificado.py
+    Define el modelo de 16 parametros: bounds, NOMBRES, fitness_function(p)
+    (devuelve 1000 si el mecanismo no ensambla), run_kinematics, evaluar
+    (metricas en mm) y validar_cinematica. Carga el mocap del CSV que esta en
+    esta misma carpeta.
+
+optimizar_simplificado_ED.py
+    Optimiza el modelo simplificado con Evolucion Diferencial. Flujo de dos
+    etapas: primero Optuna/TPE (25 trials, semilla 42) sintoniza los
+    hiperparametros de differential_evolution (strategy, popsize, mutacion,
+    recombinacion), luego hace la corrida profunda. Escribe sus salidas en
+    resultados/.
+
+optimizar_simplificado_GA.py
+    Igual pero con Algoritmo Genetico, con el mismo esquema Optuna/TPE (25
+    trials, semilla 42) para que la comparacion sea simetrica.
+
+comparar_ED_GA.py
+    Lee los .txt/.csv de resultados/ producidos por los dos optimizadores y
+    genera la comparativa (comparacion_resumen.csv y figuras comparativas). NO
+    reoptimiza; solo consume resultados ya generados.
+
+figuras_articulo.py
+    Genera las figuras de biofidelidad y demas graficos para el articulo a
+    partir de los resultados guardados.
+
+diagrama_modelo_simplificado.py
+    Dibuja el diagrama esquematico del modelo simplificado.
+
+mocap_pinza_fina_120pts.csv
+    Datos de captura de movimiento del agarre de pinza fina (120 puntos). Debe
+    estar en esta carpeta porque los modulos lo cargan por ruta relativa.
+
+requirements.txt
+    Versiones exactas de las dependencias.
+
+resultados/
+    Salidas ya generadas de la optimizacion parcial (parametros, trayectorias,
+    convergencia, biofidelidad y comparativas). Se incluyen para que
+    comparar_ED_GA.py y figuras_articulo.py funcionen sin volver a optimizar.
+
+DEPENDENCIAS / VERSIONES EXACTAS
+--------------------------------------------------------------------------------
+Python 3.9 o 3.11 (probado en ambos).
+  numpy      == 2.0.2
+  scipy      == 1.13.1
+  pandas     == 2.3.3
+  matplotlib == 3.9.4
+  optuna     == 4.9.0
+
+Instalacion:
+  pip install -r requirements.txt
+
+COMO EJECUTAR Y EN QUE ORDEN
+--------------------------------------------------------------------------------
+Ejecuta los comandos desde DENTRO de esta carpeta (las rutas al CSV y a
+resultados/ son relativas).
+
+  1) python3 optimizar_simplificado_ED.py     (optimizador ED, lento)
+  2) python3 optimizar_simplificado_GA.py     (optimizador GA, lento)
+  3) python3 comparar_ED_GA.py                (lee los .txt/.csv del paso 1 y 2)
+  4) python3 figuras_articulo.py              (figuras para el articulo)
+
+Los pasos 1 y 2 son los que optimizan (pueden tardar minutos). Los pasos 3 y 4
+solo leen resultados ya escritos en resultados/, asi que dependen de que 1 y 2
+hayan corrido antes (o de los resultados incluidos en esta entrega).
+
+RESULTADOS ESPERADOS (numeros conocidos, semilla 42)
+--------------------------------------------------------------------------------
+Evolucion Diferencial (ED):
+  error global = 2.17 mm   (err IFP 2.82 mm, err IFD 1.53 mm)
+  fitness = 0.002335       nfev = 135970
+  Hiperparametros Optuna: strategy=best1bin, popsize=28, mutacion (0.5367,
+  0.8511), recombinacion=0.7718.
+
+Algoritmo Genetico (GA):
+  error global = 2.55 mm   (err IFP 3.68 mm, err IFD 1.43 mm)
+  fitness = 0.00272        nfev = 15052
+
+Conclusion: ED gana en error global (2.17 mm vs 2.55 mm), por eso es la
+metaheuristica que se usa en el modelo completo.
+
+NOTA DE REPRODUCIBILIDAD
+--------------------------------------------------------------------------------
+Aunque la semilla sea 42, los numeros finales dependen de las VERSIONES de las
+librerias. Optuna (muestreador TPE) elige los hiperparametros y una version
+distinta selecciona hiperparametros distintos para la misma semilla; SciPy fija
+la trayectoria de differential_evolution. Usa exactamente las versiones de
+requirements.txt para reproducir los numeros de arriba.
