@@ -1,0 +1,678 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% ===== Codificacion e idioma =====
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot,es-tabla]{babel}
+
+% ===== Paquetes =====
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+
+% ===== Numeros de pagina alternados (impar derecha, par izquierda) =====
+\pagestyle{fancy}
+\fancyhf{}
+% Numero de pagina a ~7pt (como en el IEEEtran_HOWTO), un poco mas abajo
+\newcommand{\pnum}{\raisebox{-6pt}[0pt][0pt]{\normalfont\fontsize{7}{8}\selectfont\thepage}}
+\fancyhead[R]{\ifodd\value{page}\pnum\fi}
+\fancyhead[L]{\ifodd\value{page}\else\pnum\fi}
+\renewcommand{\headrulewidth}{0pt}
+
+% ===== Letra capital inicial (IEEEPARstart) en NEGRITA =====
+% Letra grande inicial en negrita y el resto de la primera palabra en
+% mayusculas y negrita (en lugar del estilo por defecto medio/versalitas).
+\def\IEEEPARstartFONTSTYLE{\bfseries}
+\def\IEEEPARstartWORDFONTSTYLE{\bfseries}
+
+% ===== TikZ (figura del mecanismo montado sobre el dedo) =====
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,decorations.pathreplacing}
+
+% Parametros de montaje de la figura del mecanismo sobre el dedo simbolico
+\newif\ifconfondo
+\confondotrue
+\newcommand{\dedoimg}{dedo_sin_fondo.png}
+\newcommand{\dedoancho}{18.6cm}
+\newcommand{\dedox}{14.1}
+\newcommand{\dedoy}{2.7}
+\newcommand{\mecEsc}{0.72}
+\newcommand{\mecAng}{17}
+\newcommand{\mecMx}{13.0}
+\newcommand{\mecMy}{6.7}
+
+\graphicspath{{figs/}{./}}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Síntesis cinemática parcial de un mecanismo de exoesqueleto de dedo mediante Evolución Diferencial y Algoritmo Genético}
+
+\author{}
+
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+Este trabajo utiliza dos técnicas de optimización, la Evolución Diferencial (ED) y
+el Algoritmo Genético (AG), ambas implementadas en Python, para obtener la
+síntesis dimensional \emph{parcial} de un mecanismo de exoesqueleto de dedo, ajustando el movimiento hasta la falange
+medial (articulación interfalángica distal, IFD). El problema se formula con 16
+parámetros de diseño y una función objetivo basada en la distancia de Chamfer
+ponderada respecto a 120 puntos de captura de movimiento (MOCAP) de un agarre de
+pinza fina, tomados de la base de datos pública de cinemática de la mano de
+Pizzolato~et~al.\ \cite{ref_pizzolato}, a la que se añaden una penalización por
+retrocesos del movimiento y un término que favorece dimensiones pequeñas. Los
+hiperparámetros de ambos algoritmos se sintonizan de manera simétrica con la
+herramienta Optuna, usando la misma semilla y el mismo número de 25 ensayos por
+método. Bajo este planteamiento, con la misma función objetivo, los mismos límites
+y el mismo número de generaciones, la ED alcanza un error global de 2.17~mm frente
+a 2.55~mm del AG y produce un mecanismo más compacto (suma de eslabones
+estructurales de 347.2~mm contra 457.1~mm). El AG, no obstante, obtiene menor
+error en la articulación IFD (1.43~mm frente a 1.53~mm), mientras que la ED
+mantiene ventaja en el error global y en la falange proximal (IFP). La ED conserva
+una ligera superioridad en este espacio de búsqueda continuo porque su mutación
+diferencial ajusta el tamaño de los pasos de forma automática, lo que favorece el
+refinamiento de la solución. Los resultados indican que ambas técnicas son
+adecuadas para esta clase de síntesis dimensional y que la elección concreta debe
+optimizar el compromiso entre error de ajuste y compacidad del mecanismo.
+\end{abstract}
+
+\begin{IEEEkeywords}
+evolución diferencial, algoritmo genético, síntesis dimensional, exoesqueleto de
+mano, optimización dimensional, cadena de mecanismos.
+\end{IEEEkeywords}
+
+\input{Introduction}
+
+\section{Modelo cinemático del exoesqueleto}
+Sobre este diseño
+se añade una tercera etapa de cuatro barras, con el fin de corregir problemas de
+seguimiento que presenta el modelo original en la articulación IFD. El presente
+estudio se centra en la optimización dimensional del mecanismo resultante
+(Fig.~\ref{fig:diagrama}).
+
+El dispositivo reproduce la flexión del dedo mediante una cadena de etapas
+acopladas accionadas por una única manivela de entrada, lo que permite gobernar
+todas las articulaciones con un solo grado de libertad activo. La primera etapa
+combina un mecanismo de cinco barras (eslabones $L_1$, $L_2$, $L_3$, $L_4$ y la
+bancada $B_1$) y uno de cuatro barras (eslabones $L_4$, $L_5$, $h_{sp}$,
+$d_{sp}$ y la bancada $B_2$; los soportes $h_{sp}$ y $d_{sp}$ forman un
+triángulo rectángulo cuya hipotenusa actúa como un único eslabón equivalente) que
+trasladan el movimiento desde la articulación metacarpofalángica (MCF) hasta la
+falange proximal (articulación interfalángica proximal, IFP). La segunda etapa
+repite el patrón de cinco barras (eslabones $L_5$, $L_3$, $L_6$, $L_7$ y la
+bancada con longitud $F_p - 2\,d_{sp}$) más cuatro barras (eslabones $L_7$,
+$L_8$, $c_2$ y la distancia desde IFP hasta $h_{sp}$) para llevar el movimiento
+desde la IFP hasta la falange medial (articulación IFD). Las falanges proximal
+$F_p$ y medial $F_m$ forman la línea del dedo (articulaciones MCF, IFP e IFD),
+mientras que la cadena de eslabones $L_1$--$L_8$ se ubica sobre el dorso. Se
+indican las bancadas $B_1$ y $B_2$, y el balancín $c_2$, los desplazamientos del
+soporte $h_{sp}$ y $d_{sp}$, y el ángulo auxiliar $\theta_{aux_{fm}}$ que orienta
+la falange medial respecto al balancín $c_2$. Las juntas de revoluta se dibujan
+como círculos blancos y los apoyos fijos con achurado. El modelo se detiene en la
+falange medial; el tercer mecanismo de cuatro barras y la falange distal no
+forman parte de esta versión. El modelo \emph{completo} incorpora además una
+tercera etapa de cuatro barras que ubica la falange distal; en este estudio se
+emplea el modelo simplificado, que analiza hasta la falange medial. Esta elección
+reduce la instancia sin perder las dificultades esenciales del problema
+(acoplamiento de etapas, restricciones de ensamble y monotonicidad del
+movimiento).
+
+Las longitudes de las falanges se consideran fijas y se toman de las medidas de
+un dedo humano real: falange proximal $L_{FP}=49$~mm, falange medial
+$L_{FM}=26$~mm y falange distal $L_{FD}=24$~mm (esta última sólo en el modelo
+completo). Dada una posición de manivela $\theta_2$, la entrada de la primera
+etapa se obtiene mediante una relación de engranaje $r_g$ y un desfase
+$\theta_{\text{off}}$ como $\theta_1=\theta_2/r_g+\theta_{\text{off}}$. La
+cinemática directa resuelve de forma secuencial los lazos de cuatro barras y
+propaga las posiciones de la IFP y la IFD a lo largo de todo el barrido de la
+manivela. Cuando una configuración no ensambla, produce valores no finitos o
+genera un retroceso de la falange medial (no monotonicidad del ángulo de la IFD),
+la pose se marca como inviable y se descarta. La Fig.~\ref{fig:exo3d} muestra
+el modelo 3D del mecanismo antes de optimizar al final de su recorrido, junto con
+las trayectorias que describen las articulaciones IFP e IFD durante el barrido
+completo de la manivela. La Fig.~\ref{fig:diagrama} muestra
+el mecanismo simplificado del exoesqueleto montado sobre un dedo simbólico: la
+cadena de eslabones $L_1$--$L_8$ se sitúa sobre el dorso del dedo, las falanges
+$F_p$ y $F_m$ se alinean con las falanges proximal y medial, y se etiquetan los
+parámetros de diseño. Las dimensiones de los eslabones representadas en la
+Fig.~\ref{fig:diagrama} corresponden al mecanismo \emph{antes de optimizar}
+(diseño de partida); la síntesis dimensional descrita en las secciones siguientes
+ajusta estas longitudes hasta las soluciones reportadas.
+
+\begin{figure}[t]
+\centerline{\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    x=0.62cm,y=0.62cm,
+    esl/.style={line width=2.6pt,line cap=round,black},
+    fal/.style={line width=3.0pt,line cap=round,black},
+    cota/.style={line width=1.0pt,{Latex[length=2mm]}-{Latex[length=2mm]}},
+    dbl/.style={line width=1.0pt,{Latex[length=2mm]}-{Latex[length=2mm]}},
+    ref/.style={line width=1.0pt,dashed},
+    ejeflecha/.style={line width=1.0pt,-{Latex[length=2mm]}},
+  ]
+  \ifconfondo
+    \node[anchor=center,inner sep=0pt] at (\dedox,\dedoy)
+      {\includegraphics[width=\dedoancho]{\dedoimg}};
+  \fi
+  \begin{scope}[
+      shift={($(\mecMx,\mecMy)-(13.7,3.8)$)},
+      rotate around={\mecAng:(13.7,3.8)},
+      scale around={\mecEsc:(13.7,3.8)},
+      transform shape]
+  % Coordenadas de los nodos (cadena L1-L8 sobre el dorso; falanges fijas)
+  \coordinate (A)  at (1.55, 7.10);
+  \coordinate (B)  at (6.97,11.82);
+  \coordinate (C)  at (14.53,12.06);
+  \coordinate (D)  at (19.48, 6.51);
+  \coordinate (E)  at (12.28, 9.94);
+  \coordinate (F)  at (13.7, 7.22);
+  \coordinate (G)  at (16.06, 7.34);
+  \coordinate (H)  at (8.39, 6.63);
+  \coordinate (Hf) at (8.39, 3.8);
+  \coordinate (I)  at (10.4, 6.63);
+  \coordinate (If) at (10.4, 3.8);
+  \coordinate (K)  at (5.5, 3.8);
+  \coordinate (M)  at (13.7, 3.8);
+  \coordinate (Fmp) at (2.1, 2.35);
+  % Eslabones de la cadena
+  \draw[esl] (G) -- (D);   \draw[esl] (D) -- (C);   \draw[esl] (C) -- (E);
+  \draw[esl] (E) -- (F);   \draw[esl] (E) -- (I);   \draw[esl] (B) -- (C);
+  \draw[esl] (B) -- (H);   \draw[esl] (A) -- (B);   \draw[esl] (H) -- (Hf);
+  \draw[esl] (I) -- (If);  \draw[esl] (A) -- (K);
+  \draw[fal] (K) -- (M);   \draw[fal] (K) -- (Fmp);
+  \draw[line width=1pt] (F) -- (M);
+  % Lineas de referencia
+  \draw[ref] (K) -- ($ (A)!1.14!(K) $);
+  \draw[ref] (M) -- ++(2.6,0);
+  % Juntas
+  \foreach \n in {A,B,C,D,E,F,G,H,I,K,M,Fmp,Hf,If}{
+    \filldraw[fill=white,draw=black,line width=1pt] (\n) circle (0.17);
+  }
+  % Bancadas (soportes fijos)
+  \foreach \n in {F,G,M}{
+    \begin{scope}[shift={(\n)}]
+      \draw[line width=1pt] (0,-0.17) -- (-0.34,-0.66) -- (0.34,-0.66) -- cycle;
+      \draw[line width=1pt] (-0.52,-0.66) -- (0.52,-0.66);
+      \foreach \x in {-0.40,-0.24,-0.08,0.08,0.24,0.40}{
+        \draw[line width=0.6pt] (\x,-0.66) -- (\x-0.18,-0.86);
+      }
+    \end{scope}
+  }
+  % Etiquetas
+  \tikzset{lab/.style={font=\itshape\large, fill=white, fill opacity=0.62,
+                       text opacity=1, inner sep=1pt},
+           labp/.style={font=\itshape\footnotesize, fill=white, fill opacity=0.7,
+                       text opacity=1, inner sep=0.6pt}}
+  \node[lab] at ($ (G)!0.5!(D) + (0.15,-0.55) $) {$L_1$};
+  \node[lab] at ($ (D)!0.5!(C) + (0.7,0.15) $) {$L_2$};
+  \node[lab] at ($ (C)!0.5!(E) + (0.45,-0.6) $) {$L_3$};
+  \node[lab] at ($ (B)!0.5!(C) + (0,0.55) $)   {$L_6$};
+  \node[lab] at ($ (A)!0.5!(B) + (-0.1,0.6) $) {$L_8$};
+  \node[lab] at ($ (B)!0.5!(H) + (-0.55,0.3) $){$L_7$};
+  \node[lab] at ($ (E)!0.5!(I) + (-0.6,0.25) $){$L_5$};
+  \node[lab] at ($ (E) + (-0.30,-1.45) $)      {$L_4$};
+  \node[lab] at ($ (A)!0.5!(K) + (-0.15,-0.55) $){$c_2$};
+  \node[lab] at ($ (K)!0.5!(Fmp) + (0.2,-0.55) $){$F_m$};
+  \node[labp] at ($ (K)!0.5!(Hf) + (0,-0.5) $) {$d_{sp}$};
+  \node[labp] at ($ (If)!0.5!(M) + (0,-0.5) $) {$d_{sp}$};
+  \node[lab] at ($ (Hf)!0.5!(If) + (-0.05,-0.62) $) {\itshape\large $F_p$};
+  \node[labp] at ($ (H)!0.55!(Hf) + (0.5,0) $) {$h_{sp}$};
+  \node[labp] at ($ (F)!0.5!(M) + (-1.0,0) $) {$B_2=d$};
+  % Cotas B1 y r3
+  \coordinate (b1a) at ($ (F) + (0,-1.0) $);
+  \coordinate (b1b) at (G |- b1a);
+  \draw[cota] (b1a) -- (b1b);
+  \node[labp] at ($ (b1a)!0.5!(b1b) + (0,0.28) $) {$B_1$};
+  \coordinate (r3a) at ($ (F) + (0,-1.7) $);
+  \coordinate (r3b) at ($ (r3a) + (1.05,0) $);
+  \draw[cota] (r3a) -- (r3b);
+  \node[labp] at ($ (r3a)!0.5!(r3b) + (-0.1,-0.32) $) {$r_3$};
+  % Angulos de entrada
+  \draw[line width=1pt] ($ (F) + (0.75:0) $) ++(55:0.9) arc (55:145:0.9);
+  \node[labp,anchor=east] at ($ (F) + (-0.30,1.75) $) {$\theta_{1_{inicial}}$};
+  \draw[ejeflecha] ($ (F)+(0.75,0.35) $) -- ++(0,0.7);
+  \draw[ejeflecha] ($ (F)+(0.75,0.35) $) -- ++(0.7,0);
+  \node[labp,anchor=west] at ($ (G) + (0.3,0.95) $) {$\theta_{2_{inicial}}$};
+  \draw[line width=1pt] ($ (M) + (0:1.05) $) arc (0:88:1.05);
+  \draw[ejeflecha] ($ (M) + (88:1.05) $) -- ++(0.02,0.2);
+  \node[labp,anchor=west] at ($ (M) + (1.45,0.10) $) {$\theta_{1m4B_{inicial}}$};
+  \draw[dbl] ($ (K) + (150:1.15) $) arc (150:212:1.15);
+  \node[labp,anchor=west] at ($ (K) + (0.05,0.95) $) {$\theta_{aux_{fm}}$};
+  \end{scope}
+\end{tikzpicture}%
+}}
+\caption{Mecanismo simplificado del exoesqueleto montado sobre un dedo simbólico:
+la cadena de eslabones $L_1$--$L_8$ se sitúa sobre el dorso de la mano y las
+falanges $F_p$ y $F_m$ se alinean con las falanges proximal y medial del dedo. Las
+dimensiones de los eslabones representadas corresponden al mecanismo \emph{antes de
+optimizar}.}
+\label{fig:diagrama}
+\end{figure}
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=0.55\columnwidth]{exo1.png}}
+\caption{Modelo 3D del mecanismo antes de optimizar, al final de su recorrido,
+con las trayectorias que siguen las articulaciones IFP e IFD.}
+\label{fig:exo3d}
+\end{figure}
+
+\section{Formulación del problema de optimización}
+\subsection{Variables de diseño}
+El vector de diseño $\mathbf{p}\in\mathbb{R}^{16}$ agrupa las dos bancadas, los
+ocho eslabones $L_1$--$L_8$, el balancín $c_2$ de la segunda etapa de cuatro
+barras, los desplazamientos del soporte $h_{sp}$ y $d_{sp}$, el ángulo auxiliar
+de la falange medial $\theta_{aux}^{FM}$, la relación de engranaje $r_g$ y el
+desfase angular de entrada $\theta_{\text{off}}$. La Tabla~\ref{tab:bounds}
+resume los límites de búsqueda. Las longitudes de cada eslabón se acotan a
+60~mm como máximo para favorecer un mecanismo compacto y fabricable, y el ángulo
+auxiliar $\theta_{aux}^{FM}$ se limita a $70^\circ$ para evitar una
+hiperflexión anatómicamente inviable de la falange medial que provocaría
+interferencia mecánica con el dedo del usuario.
+
+\begin{table}[htbp]
+\caption{Variables de diseño y límites de búsqueda}
+\begin{center}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Parámetro} & \textbf{Mín.} & \textbf{Máx.} \\
+\hline
+$B_1$, $B_2$ (mm) & 15 & 60 \\
+\hline
+$L_1$--$L_8$ (mm)        & 10 & 60 \\
+\hline
+$c_2$ (mm)      & 10 & 55 \\
+\hline
+$h_{sp}$ (mm)            & 5 & 30 \\
+\hline
+$d_{sp}$ (mm)            & 5 & 23 \\
+\hline
+$\theta_{aux}^{FM}$ (deg) & 0 & 70 \\
+\hline
+$r_g$ (relación de engranaje) & 1.0 & 8.0 \\
+\hline
+$\theta_{\text{off}}$ (rad) & $-\pi$ & $\pi$ \\
+\hline
+\end{tabular}
+\label{tab:bounds}
+\end{center}
+\end{table}
+
+\subsection{Función objetivo}
+El ajuste se mide con la distancia de Chamfer \cite{ref_chamfer} simétrica entre
+la nube de puntos de captura de movimiento $M$ y la trayectoria simulada $S$.
+Antes de evaluar el error, la trayectoria simulada se alinea de forma rígida
+(rotación $R$ y traslación $\mathbf{t}$) con los datos mediante una solución de
+Procrustes \cite{ref_procrustes}, de modo que el error refleja la \emph{forma}
+de la curva y no su colocación absoluta en el plano:
+\begin{equation}
+d_C(M,S)=\frac{1}{|M|}\!\sum_{\mathbf{m}\in M}\!\min_{\mathbf{s}\in S}\lVert \mathbf{m}-\mathbf{s}\rVert
++\frac{1}{|S|}\!\sum_{\mathbf{s}\in S}\!\min_{\mathbf{m}\in M}\lVert \mathbf{s}-\mathbf{m}\rVert .
+\label{eq:chamfer}
+\end{equation}
+donde $M$ es el conjunto de puntos de captura de movimiento (MOCAP), $S$ es el
+conjunto de puntos de la trayectoria simulada, $\mathbf{m}$ y $\mathbf{s}$ son
+puntos individuales de cada conjunto, y $\lVert\cdot\rVert$ denota la norma
+euclidiana en el plano.
+El primer término penaliza los puntos del MOCAP sin un punto simulado cercano y
+el segundo penaliza puntos simulados que se alejan de la curva objetivo; su suma
+es una métrica robusta frente a diferencias de muestreo entre ambas curvas.
+
+La función objetivo combina el error de forma de las dos trayectorias (la de la
+IFP y la de la IFD), una penalización de monotonicidad $P_{\text{mono}}$ sobre
+la IFD para evitar retrocesos del movimiento, y dos términos de regularización
+suave que empujan hacia dimensiones y ángulo auxiliar pequeños sin degradar el
+ajuste. El término $P_{\text{mono}}$ penaliza inversiones de trayectoria
+(ganchos o bucles) en las que el mecanismo del exoesqueleto retrocede sobre su
+recorrido; su inclusión garantiza que la trayectoria simulada progresa de forma
+monótona sin formar lazos que provocarían atascos en el mecanismo o fuerzas no
+deseadas sobre el dedo:
+\begin{align}
+f(\mathbf{p}) =\;& w_{IFP}\,d_C(M_{IFP},S_{IFP}) + w_{IFD}\,d_C(M_{IFD},S_{IFD}) \nonumber\\
+& + w_{m}\,P_{\text{mono}}(S_{IFD}) + w_{d}\!\sum_{i}\!L_i + w_{a}\frac{\theta_{aux}^{FM}}{\pi}.
+\label{eq:obj}
+\end{align}
+donde $d_C(M_{IFP},S_{IFP})$ y $d_C(M_{IFD},S_{IFD})$ son las distancias de
+Chamfer entre los puntos MOCAP y la trayectoria simulada en las articulaciones
+IFP e IFD respectivamente, $P_{\text{mono}}(S_{IFD})$ es la penalización por
+inversiones de trayectoria en la IFD, $\sum_{i} L_i$ es la suma de las longitudes
+de los eslabones estructurales, y $\theta_{aux}^{FM}$ es el ángulo auxiliar de la
+falange medial normalizado por $\pi$.
+Los pesos son $w_{IFP}=0.40$, $w_{IFD}=0.60$, $w_{m}=5.0$ y
+$w_{d}=w_{a}=5\times10^{-4}$. Se asigna mayor peso a la IFD porque es la
+articulación más alejada de la entrada y, por tanto, la más difícil de ajustar:
+acumula los errores de las dos etapas. Los valores de los pesos se ajustan
+mediante pruebas experimentales iterativas hasta obtener un equilibrio adecuado
+entre el error de forma, la penalización de retrocesos y la regularización. Las
+configuraciones inviables (sin ensamble o con retroceso) reciben una
+penalización fija de $1000$, lo que crea amplias mesetas en el espacio de
+búsqueda y refuerza el carácter multimodal del problema. El
+planteamiento, los límites y la función objetivo son idénticos para la ED y el
+AG, de modo que la comparación mide el algoritmo y no el planteamiento.
+
+La Tabla~\ref{tab:restricciones} resume las restricciones cinemáticas que se
+aplican durante la evaluación de cada individuo. Si alguna de estas condiciones
+se viola, la configuración se considera inviable y recibe la penalización fija
+de $1000$.
+
+\begin{table}[htbp]
+\caption{Restricciones cinemáticas aplicadas en ambos algoritmos}
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Restricción} & \textbf{Condición de penalización} \\
+\hline
+No ensamble & El mecanismo no cierra en alguna pose \\
+\hline
+Valores no finitos & Se genera NaN o infinito \\
+\hline
+Retroceso de falange medial & No monotonicidad de $\theta_{fm} > 0.5^{\circ}$ \\
+\hline
+Longitudes mínimas & Algún eslabón $\leq 5$~mm \\
+\hline
+Geometría del soporte & $F_p - 2\,d_{sp} \leq 1$~mm \\
+\hline
+Posiciones fuera de rango & Alguna coordenada $> 300$~mm \\
+\hline
+\end{tabular}
+\label{tab:restricciones}
+\end{center}
+\end{table}
+
+\section{Evaluación de las técnicas de optimización}
+Ambos algoritmos se ejecutan con la misma semilla aleatoria (42), valor
+convencional ampliamente adoptado en estudios previos de optimización evolutiva
+que garantiza la reproducibilidad de los resultados, y el mismo número máximo de
+generaciones (300), presupuesto validado como suficiente dado que la ED registra
+su última mejora cerca de la generación 257 y el AG cerca de la generación 268,
+de modo que ambos explotan el presupuesto completo sin estancamiento prematuro.
+Para evitar que el desempeño dependa de hiperparámetros elegidos a mano
+--en el caso de la ED: estrategia de mutación, tamaño de población, rango del
+factor de mutación y tasa de recombinación; en el caso del AG: tamaño de
+población, probabilidades de cruce y mutación, índices de distribución SBX y
+polinomial, y tamaño de torneo--, una fuente habitual de sesgo al comparar
+metaheurísticas, los hiperparámetros de cada algoritmo se sintonizan de forma
+automática y simétrica con Optuna \cite{ref_optuna}, empleando el muestreador por
+estimación de densidad arborescente (TPE, \emph{Tree-structured Parzen
+Estimator}). El procedimiento es idéntico para la ED y el AG: en una primera
+etapa, Optuna realiza 25 ensayos por algoritmo, el mismo número para los dos, con
+corridas cortas que evalúan el fitness alcanzado para distintas combinaciones de
+hiperparámetros; en una segunda etapa, la mejor combinación encontrada se emplea
+en una corrida profunda de 300 generaciones, cuyos resultados son los que se
+reportan. La búsqueda de Optuna usa la misma semilla (42) en ambos casos, de modo
+que la sintonización es reproducible y equitativa. La Tabla~\ref{tab:config}
+resume los hiperparámetros resultantes. Los resultados reportados se obtuvieron
+con Python y las bibliotecas NumPy~2.0.2, SciPy~1.13.1 y Optuna~4.9.0; conviene
+advertir que las cifras pueden discrepar ligeramente al emplear otras versiones
+de estas bibliotecas, ya que el muestreador TPE de Optuna puede seleccionar
+hiperparámetros distintos para la misma semilla y SciPy puede alterar la
+trayectoria de la evolución diferencial, por lo que la reproducción exacta
+requiere fijar dichas versiones.
+
+\subsection{Evolución Diferencial}
+La Evolución Diferencial es una técnica poblacional para optimización en
+espacios continuos, cuyas variantes y aplicaciones han sido objeto de revisiones
+extensas \cite{ref_de_recent,ref_de_image}. En este trabajo se utiliza la
+implementación \texttt{differential\_evolution} de SciPy con la
+estrategia \texttt{best1bin}. Los hiperparámetros sintonizados por Optuna son
+un tamaño de población relativo $\text{popsize}=28$, un factor de mutación
+diferencial que varía de forma aleatoria en cada generación dentro del rango
+$[0.54,\,0.85]$ y recombinación $0.77$, con tolerancia $10^{-7}$. En cada
+generación, los vectores de prueba se construyen a partir del mejor individuo y
+de la diferencia escalada entre dos individuos elegidos al azar. Esta mutación
+diferencial escala automáticamente sus pasos con la dispersión de la población:
+cuando la población está dispersa los pasos son grandes (exploración) y,
+conforme converge, los pasos se reducen (explotación), sin necesidad de fijar
+una amplitud de mutación constante.
+
+\subsection{Algoritmo Genético}
+Se implementa un AG real codificado con selección por torneo (tamaño 3), cruza
+binaria simulada (SBX) \cite{ref_sbx} y mutación polinomial. Los hiperparámetros
+sintonizados por Optuna son una población de 52 individuos, probabilidad de
+cruza $0.63$, probabilidad de mutación $0.22$, índices de distribución
+$\eta_c=16$ (SBX) y $\eta_m=14$ (mutación polinomial) y elitismo de 2 individuos.
+La SBX y la mutación polinomial son operadores adecuados para variables
+continuas; sus índices de distribución, antes fijados a mano, aquí los determina
+Optuna junto con el resto de los hiperparámetros. Se aplica un criterio de paro
+temprano por estancamiento con una tolerancia de 100 generaciones sin mejora; en
+la corrida reportada el AG sigue mejorando hasta una fase avanzada y agota las
+300 generaciones sin activar dicho paro, lo que indica que la sintonización de
+Optuna encuentra una configuración que mantiene diversidad genética suficiente
+para seguir explorando el espacio de búsqueda durante todo el presupuesto
+asignado.
+
+\begin{table}[htbp]
+\caption{Configuración de los algoritmos (hiperparámetros sintonizados con Optuna)}
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Evolución Diferencial} & \textbf{Algoritmo Genético} \\
+\hline
+estrategia: best1bin & selección: torneo (3) \\
+\hline
+popsize: 28 & población: 52 \\
+\hline
+mutación: $(0.54,0.85)$ & cruza: SBX ($\eta_c=16$) \\
+\hline
+recombinación: 0.77 & mutación: polinomial ($\eta_m=14$) \\
+\hline
+maxiter: 300 & generaciones: 300 \\
+\hline
+tol: $10^{-7}$ & $p_{cx}=0.63$, $p_{mut}=0.22$ \\
+\hline
+semilla: 42 & élite: 2, tolerancia: 100 \\
+\hline
+\multicolumn{2}{|l|}{Sintonización: Optuna (TPE), 25 ensayos por algoritmo, semilla 42} \\
+\hline
+\end{tabular}
+\label{tab:config}
+\end{center}
+\end{table}
+
+\section{Resultados}
+\subsection{Error de ajuste}
+La Tabla~\ref{tab:resultados} reúne las métricas de ambas corridas. La ED obtiene
+un error global de 2.17~mm, ligeramente menor que los 2.55~mm del AG. El reparto
+por articulación, ilustrado en la Fig.~\ref{fig:errores}, muestra que la ED
+ajusta mejor la falange proximal (IFP: 2.82~mm contra 3.68~mm), mientras que el
+AG, una vez sintonizado, reproduce con mayor fidelidad la articulación
+interfalángica distal (IFD: 1.43~mm contra 1.53~mm de la ED). En conjunto, las dos soluciones quedan
+muy próximas en error de forma, lo que confirma que ambas técnicas son
+capaces de propagar el movimiento de forma adecuada hasta el extremo del
+mecanismo.
+
+\begin{table}[htbp]
+\caption{Resultados de la optimización (modelo simplificado)}
+\begin{center}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Métrica} & \textbf{ED} & \textbf{AG} \\
+\hline
+Error global (mm)      & \textbf{2.1736} & 2.5543 \\
+\hline
+Error IFP (mm)         & \textbf{2.8156} & 3.6813 \\
+\hline
+Error IFD (mm)         & 1.5317 & \textbf{1.4273} \\
+\hline
+Fitness                & \textbf{0.002335} & 0.002720 \\
+\hline
+Evaluaciones (nfev)    & 135\,970 & 15\,052 \\
+\hline
+$\sum$ eslabones estructurales (mm) & \textbf{347.2} & 457.1 \\
+\hline
+\end{tabular}
+\label{tab:resultados}
+\end{center}
+\end{table}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.92\columnwidth]{comparacion_errores.png}}
+\caption{Error de forma (distancia de Chamfer) global, en la IFP y en la IFD
+para la ED y el AG. La ED domina en el error global y en la IFP, mientras que el
+AG ajusta ligeramente mejor la IFD.}
+\label{fig:errores}
+\end{figure}
+
+\subsection{Análisis dimensional}
+La Tabla~\ref{tab:dimensiones} compara, eslabón por eslabón, las dimensiones del
+diseño CAD de referencia frente a las optimizadas por la ED y el AG. Las
+longitudes obtenidas por la ED son coherentes con los límites de la
+Tabla~\ref{tab:bounds} y dan lugar a un mecanismo compacto, donde la suma de los once
+eslabones estructurales ($B_1$, $B_2$, $L_1$--$L_8$ y $c_2$) es de 347.2~mm para
+la ED, 457.1~mm para el AG y aproximadamente 380.0~mm para el diseño CAD base.
+Es decir, la ED no sólo obtiene un error global menor, sino que además
+entrega el mecanismo más compacto de los tres, mientras que el AG tiende a
+soluciones de mayor tamaño que el propio diseño de referencia. La compacidad es
+deseable para la fabricación, el peso y la portabilidad del dispositivo sobre la
+mano del usuario, por lo que constituye un criterio de diseño tan relevante como
+el propio error de ajuste.
+
+\begin{table}[htbp]
+\caption{Dimensiones de los eslabones (mm): diseño CAD base frente a las
+soluciones óptimas de ED y AG}
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Parámetro} & \textbf{CAD base} & \textbf{ED} & \textbf{AG} \\
+\hline
+$B_1$  & 18.00 & 37.33 & 39.19 \\
+\hline
+$B_2$  & 20.00 & 39.62 & 59.87 \\
+\hline
+$L_1$  & 35.00 & 16.00 & 31.84 \\
+\hline
+$L_2$  & 49.00 & 46.56 & 51.84 \\
+\hline
+$L_3$  & 25.00 & 16.61 & 33.01 \\
+\hline
+$L_4$  & 20.00 & 21.60 & 38.83 \\
+\hline
+$L_5$  & 25.00 & 32.15 & 38.15 \\
+\hline
+$L_6$  & 55.00 & 39.85 & 51.26 \\
+\hline
+$L_7$  & 35.00 & 19.16 & 38.22 \\
+\hline
+$L_8$  & 52.00 & 52.07 & 53.01 \\
+\hline
+$c_2$  & 46.01 & 26.30 & 21.84 \\
+\hline
+$h_{sp}$ & 17.00 & 14.91 & 15.63 \\
+\hline
+$d_{sp}$ & 18.00 & \phantom{0}7.87 & \phantom{0}5.00 \\
+\hline
+$\sum$ estructurales & 380.0 & \textbf{347.2} & 457.1 \\
+\hline
+\end{tabular}
+\label{tab:dimensiones}
+\end{center}
+\end{table}
+
+\subsection{Biofidelidad de las trayectorias}
+La Fig.~\ref{fig:biofid_ed} muestra la superposición de las trayectorias
+simuladas por la ED contra los 120 puntos MOCAP del agarre de pinza fina: tanto
+la curva de la IFP como la de la IFD siguen de cerca la forma fisiológica, con
+errores de Chamfer de 2.82~mm y 1.53~mm respectivamente. La
+Fig.~\ref{fig:biofid_ga} presenta el mismo resultado para el AG, cuyas
+trayectorias acompañan a los datos con errores de 3.68~mm (IFP) y 1.43~mm (IFD);
+la curva de la IFD del AG reproduce con mayor fidelidad la flexión natural,
+obteniendo 0.10~mm menos de error que la ED en esa articulación. Ambas soluciones
+exhiben una biofidelidad satisfactoria: la ED ofrece mejor seguimiento global
+(2.17~mm frente a 2.55~mm del AG) y en la IFP, mientras que el AG presenta
+ventaja específica en la IFD.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\columnwidth]{biofidelidad_simplificado_ED.png}}
+\caption{Biofidelidad de la solución de la ED: trayectorias simuladas (IFP e
+IFD) superpuestas a los puntos MOCAP.}
+\label{fig:biofid_ed}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\columnwidth]{biofidelidad_simplificado_GA.png}}
+\caption{Biofidelidad de la solución del AG: las trayectorias de la IFP y la IFD siguen a los puntos MOCAP.}
+\label{fig:biofid_ga}
+\end{figure}
+
+\subsection{Convergencia}
+La Fig.~\ref{fig:convergencia} presenta las curvas de convergencia. Ambos
+algoritmos descienden de forma sostenida y aprovechan prácticamente todo el
+número de generaciones disponible: la ED registra su última mejora cerca de la
+generación 257 y el AG cerca de la 268, de modo que ninguno se estanca de forma
+temprana. La ED alcanza un valor de la función objetivo de 0.002335, mientras que
+el AG converge a 0.002720. Cabe notar que el AG llega a ese
+resultado con un número de evaluaciones de la función objetivo sensiblemente
+menor (Tabla~\ref{tab:resultados}), lo que refleja su distinto mecanismo de
+muestreo del espacio de búsqueda.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.92\columnwidth]{comparacion_convergencia.png}}
+\caption{Curvas de convergencia de la ED y el AG. Ambos métodos descienden de
+forma sostenida durante casi todas las generaciones; la ED converge a un fitness de 0.002335 y el AG a 0.002720.}
+\label{fig:convergencia}
+\end{figure}
+
+\section{Discusión}
+El espacio de diseño de la síntesis dimensional es \emph{continuo} y altamente
+multimodal, con amplias regiones inviables (sin ensamble o con retroceso de la
+falange medial) que generan mesetas en la función objetivo. La ventaja de la ED
+en este escenario proviene de la forma en que construye cada nueva solución: en
+lugar de aplicar un tamaño de paso fijo, suma a un individuo la diferencia entre
+otros dos individuos de la población. Así, la magnitud del cambio se adapta sola
+a lo dispersa que esté la población: cuando los individuos están repartidos por
+el espacio, los cambios son grandes y el algoritmo explora; cuando la población
+se concentra cerca de una buena solución, los cambios se reducen automáticamente
+y el algoritmo afina el ajuste. Este ajuste automático del paso, sin necesidad de
+fijarlo de antemano, encaja de forma natural con variables continuas como las
+longitudes de los eslabones \cite{ref_de_survey,ref_ga_pso_de} y explica, en
+buena parte, que la ED alcance un error global de 2.17~mm y, sobre todo, el
+mecanismo más compacto.
+
+El AG real codificado se apoya en la cruza SBX y la mutación polinomial. Una vez
+que sus índices de distribución ($\eta_c$, $\eta_m$) y sus probabilidades se
+sintonizan con Optuna, en lugar de fijarse a mano, el AG alcanza un error global de 2.55~mm, muy cercano al de la ED, e incluso la supera
+en la articulación interfalángica distal (IFD). Este resultado muestra que la ED no domina sistemáticamente a los AG en problemas
+continuos \cite{ref_de_vs_ga,ref_ga_pso_de}: la brecha observada se reduce de
+manera notable cuando ambos algoritmos parten de una sintonización equitativa.
+La contrapartida del AG en este caso es que tiende a soluciones de mayor tamaño,
+lo que penaliza la compacidad del mecanismo.
+
+Conviene señalar una limitación metodológica relativa al costo de cómputo. La ED
+se evalúa con una implementación vectorizada y paralela, mientras que el AG se
+ejecuta en Python puro; por ello, la comparación de tiempos de ejecución está
+sesgada y no se reporta como criterio de mérito. Se enfatiza, en cambio, la
+\emph{calidad de la solución} y el número de evaluaciones de la función (nfev)
+como métrica de cómputo más justa. La ED alcanza un error global ligeramente
+menor pese a realizar más evaluaciones, mientras que el AG obtiene una solución
+muy próxima con un número de evaluaciones bastante menor, lo que sugiere
+que cada método explora el espacio de búsqueda con una eficiencia distinta.
+
+\section{Conclusión}
+Se obtiene la síntesis dimensional parcial (hasta la falange medial) de un
+mecanismo de exoesqueleto de dedo utilizando las técnicas de optimización
+Evolución Diferencial y Algoritmo Genético real codificado, bajo un planteamiento, una función objetivo y un mismo
+número de generaciones, y con los hiperparámetros de ambos métodos sintonizados de
+forma simétrica con Optuna (muestreador TPE, 25 ensayos por algoritmo). La ED
+obtiene un error global de 2.17~mm frente a 2.55~mm del AG y, de manera notable,
+entrega el mecanismo más compacto (347.2~mm de suma de eslabones estructurales,
+frente a 457.1~mm del AG). Una vez sintonizado, el AG resulta competitivo e
+incluso ajusta mejor la articulación interfalángica distal (IFD). El análisis
+sugiere que, para esta clase de problemas continuos y multimodales, la mutación
+diferencial de la ED, que ajusta por sí sola el tamaño de sus pasos, ofrece una
+ligera ventaja en error global y, sobre todo, en compacidad, mientras que un AG
+bien sintonizado alcanza una calidad de ajuste comparable. La ED se recomienda como método de referencia cuando la compacidad
+del mecanismo es prioritaria, sin que ello descarte al AG como alternativa
+válida para esta clase de síntesis dimensional.
+
+Como trabajo futuro se contempla: (i) extender la optimización al modelo completo de tres falanges, incorporando la falange distal y la tercera etapa de cuatro barras; (ii) realizar comparaciones multisemilla con pruebas estadísticas para estimar la robustez de cada algoritmo; (iii) implementar ambos algoritmos en igualdad de condiciones de cómputo (mismo lenguaje y mismo nivel de vectorización), de modo que sus tiempos de ejecución puedan compararse sin sesgo; y (iv) validar físicamente el mecanismo óptimo mediante prototipado y medición de las trayectorias reales.
+
+\input{references}
+\end{document}

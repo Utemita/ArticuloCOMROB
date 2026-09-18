@@ -1,0 +1,138 @@
+================================================================================
+OPTIMIZACION COMPLETA (ESPANOL) - Modelo de 3 falanges y 5 mecanismos
+================================================================================
+
+PROPOSITO
+--------------------------------------------------------------------------------
+Esta carpeta contiene la optimizacion del MODELO COMPLETO del exoesqueleto de
+dedo: 3 falanges (proximal, medial y distal) movidas por 5 mecanismos, con 21
+parametros. Se optimiza con Evolucion Diferencial (ED), la metaheuristica que
+gano la comparacion de la optimizacion parcial (ver carpeta
+01_optimizacion_parcial_es).
+
+El modelo completo REUTILIZA el mismo planteamiento que el simplificado y lo
+EXTIENDE para cubrir la falange distal:
+  - Distancia de Chamfer ponderada por articulacion (IFP 0.25, IFD 0.375,
+    punta/TIP 0.375).
+  - Penalizacion de monotonicidad (W_MONO = 5.0) aplicada a IFD y a la punta.
+  - Perfil angular DIP (W_DIP = 0.3) para que la flexion distal siga el patron
+    del mocap, con tope fisiologico DIP_MAX_DEG = 35 grados.
+  - Alineacion rigida tipo Kabsch/Procrustes y penalizacion fija de 1000 para
+    mecanismos que no ensamblan (igual que la parcial).
+
+Estructura de los mecanismos (segun modelo_completo.py):
+  ETAPA 1 (5 barras + 4 barras) -> falange proximal (articulacion MCP)
+  ETAPA 2 (5 barras + 4 barras) -> falange medial   (articulacion IFP)
+  ETAPA 3 (4 barras)            -> falange distal    (articulacion IFD/DIP)
+
+CONTENIDO Y QUE HACE CADA SCRIPT
+--------------------------------------------------------------------------------
+comun.py
+    Utilidades compartidas (mismas que en la parcial): carga del mocap,
+    distancia de Chamfer, alineacion rigida, penalizacion de monotonicidad y los
+    solucionadores de mecanismos (sol_5_barras, solve_four_bar,
+    circle_intersections).
+
+modelo_completo.py
+    Define el modelo de 21 parametros. Los indices 0-16 son el mecanismo base
+    (falanges proximal y medial); los indices 17-20 son el tercer mecanismo de
+    4 barras (Link9_3 acoplador, Link10_3 balancin, back3_3 soporte dorsal,
+    up3_3 standoff dorsal), que da movimiento a la falange distal. Expone la
+    misma interfaz que el modelo simplificado: bounds, NOMBRES,
+    fitness_function(p), run_kinematics, evaluar, validar_cinematica.
+
+optimizar_completo_ED.py   (VIA CANONICA, alineada con la parcial)
+    Optimiza el modelo completo con ED usando exactamente el mismo flujo de dos
+    etapas que la parcial: Optuna/TPE (25 trials, semilla 42) para sintonizar
+    los hiperparametros de differential_evolution y luego la corrida profunda.
+    Usa la misma funcion objetivo extendida, la misma monotonicidad y el mismo
+    esquema de restricciones + penalizacion 1000. Durante la busqueda usa
+    polish=False para acelerar (documentado en su docstring). ESTE es el script
+    recomendado y el que produjo los resultados de resultados/.
+
+exo_18_pinza_fina.py       (LEGACY / referencia del tercer mecanismo)
+    Version anterior del pipeline, con hiperparametros FIJOS (sin Optuna). Se
+    incluye como material de referencia para entender el tercer mecanismo.
+
+optimizar_tercer_mecanismo.py   (LEGACY / referencia)
+    Runner legacy que optimiza el tercer mecanismo con hiperparametros fijos
+    (best1bin, popsize 22, mutacion (0.5,1.0), recombinacion 0.7). NO usa
+    Optuna. Se conserva como referencia; la via canonica es
+    optimizar_completo_ED.py.
+
+mocap_pinza_fina_120pts.csv
+    Datos de captura de movimiento (120 puntos). Debe estar en esta carpeta:
+    modelo_completo.py lo carga por ruta relativa.
+
+requirements.txt
+    Versiones exactas de las dependencias.
+
+resultados/
+    Salidas ya generadas de la optimizacion completa con ED.
+
+DESCRIPCION DEL TERCER MECANISMO (ETAPA 3)
+--------------------------------------------------------------------------------
+La ETAPA 3 mueve la falange DISTAL respecto de la MEDIAL/PROXIMAL. En el codigo
+(modelo_completo.py, seccion "TERCER MECANISMO DE 4 BARRAS") se implementa asi:
+  - Un acoplador Link9_3 y un balancin Link10_3.
+  - Un soporte dorsal definido por back3_3 (retroceso a lo largo del eje de la
+    falange) y up3_3 (standoff dorsal), que fija el punto de anclaje Pa.
+  - El punto D3 se obtiene por INTERSECCION DE CIRCULOS (circle_intersections)
+    entre el circulo de radio Link9_3 centrado en Pa y el de radio Link10_3
+    centrado en el punto IFD.
+  - Con D3 se calcula el angulo del balancin y de ahi el angulo distal.
+Incluye el tope fisiologico DIP_MAX_DEG = 35 grados sobre la flexion relativa
+DIP.
+
+NOTA IMPORTANTE SOBRE EL CONTEO DE BARRAS
+--------------------------------------------------------------------------------
+El usuario se refirio a esta tercera etapa como un mecanismo de "3 barras". El
+codigo, sin embargo, la implementa de forma consistente como un mecanismo de
+CUATRO barras (acoplador Link9_3, balancin Link10_3, soporte dorsal via
+back3_3/up3_3 y punto D3 por interseccion de circulos). Este documento describe
+la etapa como la implementa el codigo (4 barras). Confirmar cual es la
+denominacion correcta. No se cambio el codigo por esta discrepancia.
+
+Para el analisis detallado de la alineacion completa vs parcial, ver el reporte
+../AUDITORIA_completa_vs_parcial.md.
+
+DEPENDENCIAS / VERSIONES EXACTAS
+--------------------------------------------------------------------------------
+Python 3.9 o 3.11 (probado en ambos).
+  numpy      == 2.0.2
+  scipy      == 1.13.1
+  pandas     == 2.3.3
+  matplotlib == 3.9.4
+  optuna     == 4.9.0
+
+Instalacion:
+  pip install -r requirements.txt
+
+COMO EJECUTAR Y EN QUE ORDEN
+--------------------------------------------------------------------------------
+Ejecuta desde DENTRO de esta carpeta (rutas relativas al CSV y a resultados/).
+
+  1) python3 optimizar_completo_ED.py    (via canonica, lento; escribe en
+                                           resultados/)
+Opcional (referencia legacy, hiperparametros fijos):
+  - python3 optimizar_tercer_mecanismo.py
+  - python3 exo_18_pinza_fina.py
+
+RESULTADOS ESPERADOS (numeros conocidos, semilla 42)
+--------------------------------------------------------------------------------
+De resultados/parametros_completo_ED.txt (optimizar_completo_ED.py):
+  error global = 3.39 mm
+  err IFP  = 4.21 mm
+  err IFD  = 1.86 mm
+  err punta (TIP) = 4.10 mm
+  ROM DIP = 30.18 grados
+  fitness = 0.003821   nfev = 381534
+  Hiperparametros Optuna: strategy=best1bin, popsize=30, mutacion (0.4755,
+  0.8137), recombinacion=0.7897.
+
+NOTA DE REPRODUCIBILIDAD
+--------------------------------------------------------------------------------
+Los numeros finales dependen de las VERSIONES de las librerias aunque la semilla
+sea 42. Optuna (TPE) elige los hiperparametros y SciPy fija la trayectoria de
+differential_evolution. Usa exactamente las versiones de requirements.txt para
+reproducir los numeros de arriba.

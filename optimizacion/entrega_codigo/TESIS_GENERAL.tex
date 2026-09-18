@@ -1,0 +1,169 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\usepackage{parskip}
+
+\title{Documento general de la tesis\\[2pt]
+\large Sintesis dimensional cinematica de un exoesqueleto de rehabilitacion de dedo}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+Este documento resume de que trata la tesis, cual es el objetivo, en que se basa
+y que falta. Acompana a la entrega de codigo organizada en tres carpetas
+descargables dentro de esta misma ubicacion (\texttt{entrega\_codigo/}).
+
+\section{De que trata la tesis}
+
+La tesis aborda la \textbf{sintesis dimensional cinematica} de un exoesqueleto de
+rehabilitacion para un dedo de la mano. El objetivo del diseno es que el
+exoesqueleto reproduzca el \textbf{agarre de pinza fina} que se midio por captura
+de movimiento (mocap) en un dedo humano real. Es decir, dado un patron de
+movimiento humano (la trayectoria de las falanges durante la pinza fina), se
+buscan las dimensiones de los eslabones del mecanismo del exoesqueleto para que
+sus falanges sigan ese mismo movimiento.
+
+El problema se plantea como una optimizacion: se define una funcion objetivo que
+mide cuanto se parece la trayectoria del exoesqueleto a la del mocap, y se buscan
+los parametros dimensionales que la minimizan.
+
+Se trabajan dos versiones del modelo:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Modelo simplificado (parcial), 16 parametros:} cubre la
+        cinematica hasta la falange medial (articulaciones MCP e IFP). Es el
+        banco de pruebas para comparar metaheuristicas de forma justa.
+  \item \textbf{Modelo completo, 21 parametros:} cubre las tres falanges
+        (proximal, medial y distal) con cinco mecanismos. Extiende el modelo
+        simplificado para incluir la falange distal.
+\end{itemize}
+
+\section{Objetivo}
+
+El objetivo metodologico es \textbf{comparar dos metaheuristicas de forma justa y
+simetrica}:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Evolucion Diferencial (ED)
+  \item Algoritmo Genetico (GA)
+\end{itemize}
+
+La comparacion es justa porque ambos algoritmos:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Minimizan \textbf{la misma funcion objetivo} con los mismos pesos.
+  \item Usan \textbf{los mismos limites} (bounds) de los parametros.
+  \item \textbf{Sintonizan sus hiperparametros con Optuna} (muestreador TPE, 25
+        trials, semilla 42), de modo que ninguno queda en desventaja por una mala
+        eleccion manual de hiperparametros.
+\end{itemize}
+
+Asi, la diferencia de resultados mide el ALGORITMO y no la formulacion del
+problema. El ganador de la comparacion en el modelo simplificado (ED, con error
+global 2.17~mm frente a 2.55~mm del GA) es la metaheuristica que despues se usa
+para optimizar el \textbf{modelo completo}.
+
+\section{En que se basa}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Datos de mocap de pinza fina (120 puntos):} la trayectoria
+        objetivo que el exoesqueleto debe reproducir
+        (\texttt{mocap\_pinza\_fina\_120pts.csv}).
+  \item \textbf{Distancia de Chamfer} como metrica de forma: compara la nube de
+        puntos de la trayectoria del exoesqueleto con la del mocap, ponderada por
+        articulacion.
+  \item \textbf{Alineacion rigida optima tipo Kabsch/Procrustes:} antes de medir
+        el error se alinea rigidamente la trayectoria simulada con la del mocap,
+        de modo que se compara la FORMA del movimiento y no su posicion absoluta.
+  \item \textbf{Penalizacion de monotonicidad (W\_MONO = 5.0):} obliga al
+        movimiento a avanzar de forma coherente, sin retrocesos artificiales.
+  \item \textbf{Marco de sintesis de mecanismos de 5 y 4 barras:} las etapas del
+        exoesqueleto se modelan como combinaciones de mecanismos de cinco y
+        cuatro barras, resueltos con los solucionadores de \texttt{comun.py}
+        (\texttt{sol\_5\_barras}, \texttt{solve\_four\_bar},
+        \texttt{circle\_intersections}).
+  \item \textbf{Restricciones cinematicas + penalizacion fija de 1000:} los
+        disenos que no ensamblan o violan restricciones fisiologicas reciben una
+        penalizacion alta.
+  \item \textbf{El articulo COMROB} como soporte y marco de publicacion de los
+        resultados.
+\end{itemize}
+
+Detalle de la comparacion completa vs parcial (funcion objetivo, monotonicidad,
+Optuna y restricciones) en el reporte
+\texttt{AUDITORIA\_completa\_vs\_parcial.tex}.
+
+\section{Tercera etapa para la falange distal}
+
+Al modelo original se le \textbf{agrego una TERCERA ETAPA de mecanismo de cuatro
+barras} para dar movimiento a la \textbf{falange distal respecto de la proximal},
+y esa tercera etapa se \textbf{incorporo al analisis cinematico} (queda dentro
+del barrido y de la funcion objetivo del modelo completo).
+
+\paragraph{Aclaracion anatomica (no proviene del usuario).} En la anatomia del
+dedo, la falange distal articula directamente con la falange media (o medial) a
+traves de la articulacion interfalangica distal (DIP/IFD). Se deja constancia de
+esta precision como aclaracion separada, sin sustituir la frase del usuario
+(``respecto a la proximal''). Confirmar con el usuario la referencia anatomica que
+debe quedar en la redaccion final de la tesis.
+
+En el codigo (\texttt{modelo\_completo.py}, seccion ``TERCER MECANISMO DE 4
+BARRAS'') esta tercera etapa se implementa como un mecanismo de \textbf{cuatro
+barras}:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Acoplador \texttt{Link9\_3}.
+  \item Balancin \texttt{Link10\_3}.
+  \item Soporte dorsal definido por \texttt{back3\_3} (retroceso a lo largo del
+        eje de la falange) y \texttt{up3\_3} (standoff dorsal), que fija el punto
+        de anclaje.
+  \item El punto \texttt{D3} se obtiene por \textbf{interseccion de circulos}
+        (\texttt{circle\_intersections}), y de ahi se calcula el angulo de la
+        falange distal.
+\end{itemize}
+
+Incluye ademas el tope fisiologico \texttt{DIP\_MAX\_DEG = 35} grados y un termino
+de perfil angular DIP en la funcion objetivo.
+
+\section{Que falta}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Construir el CAD} del exoesqueleto con los 21 parametros
+        optimizados del modelo completo.
+  \item \textbf{Verificar el agarre} del CAD contra las trayectorias alineadas
+        del mocap.
+  \item \textbf{Ajustar por interferencias mecanicas} (colisiones y choques entre
+        eslabones que la cinematica idealizada no captura).
+\end{itemize}
+
+\section{Estructura de la entrega}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \texttt{01\_optimizacion\_parcial\_es/}: optimizacion parcial (modelo
+        simplificado, 16 parametros) en espanol, con comparacion ED vs GA,
+        figuras y resultados.
+  \item \texttt{02\_optimizacion\_completa\_es/}: optimizacion completa (modelo de
+        3 falanges, 21 parametros) en espanol, con la via canonica
+        (\texttt{optimizar\_completo\_ED.py}) y la via legacy de referencia del
+        tercer mecanismo.
+  \item \texttt{03\_optimizacion\_parcial\_en/}: version en ingles de la
+        optimizacion parcial.
+  \item \texttt{AUDITORIA\_completa\_vs\_parcial.tex}: reporte de auditoria que
+        verifica que la optimizacion completa incorpora las mismas mejoras que la
+        parcial.
+\end{itemize}
+
+Cada carpeta es autocontenida (incluye su CSV de mocap y sus scripts) y trae su
+propio documento de texto (\texttt{LEEME.txt} / \texttt{README.txt}) con el
+detalle de scripts, dependencias exactas, orden de ejecucion y resultados
+esperados.
+
+\end{document}
