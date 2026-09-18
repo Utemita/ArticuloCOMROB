@@ -100,12 +100,6 @@ tercera etapa se implementa como un mecanismo de **cuatro barras**:
 Incluye ademas el tope fisiologico `DIP_MAX_DEG = 35` grados y un termino de
 perfil angular DIP en la funcion objetivo.
 
-> **Nota sobre la denominacion:** el usuario se refirio a esta etapa como un
-> mecanismo de **3 barras**; el codigo la implementa como un mecanismo de
-> **4 barras**. Este documento la describe segun lo que implementa el codigo (4
-> barras). Confirmar cual es la denominacion correcta. No se cambio el codigo
-> por esta discrepancia.
-
 ## Que falta
 
 - **Construir el CAD** del exoesqueleto con los 21 parametros optimizados del
@@ -113,9 +107,6 @@ perfil angular DIP en la funcion objetivo.
 - **Verificar el agarre** del CAD contra las trayectorias alineadas del mocap.
 - **Ajustar por interferencias mecanicas** (colisiones y choques entre eslabones
   que la cinematica idealizada no captura).
-- **Confirmar el conteo de barras de la tercera etapa** (3 vs 4 barras, ver la
-  nota anterior) para unificar la denominacion entre el texto de la tesis y el
-  codigo.
 
 ## Estructura de la entrega
 

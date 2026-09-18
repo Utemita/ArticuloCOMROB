@@ -1,0 +1,403 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\usepackage{parskip}
+
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{Auditoria: optimizacion COMPLETA vs PARCIAL}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+Comparacion a fondo del codigo de la optimizacion completa
+(\code{modelo\_completo.py}, \code{optimizar\_completo\_ED.py},
+\code{optimizar\_tercer\_mecanismo.py}) contra la optimizacion parcial
+(\code{modelo\_simplificado.py}, \code{optimizar\_simplificado\_ED.py},
+\code{optimizar\_simplificado\_GA.py}), para verificar que la completa incorpora
+las mismas mejoras que la parcial en cuatro ejes:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item (a) funcion objetivo Chamfer ponderada por articulacion
+  \item (b) penalizacion de monotonicidad (W\_MONO = 5.0)
+  \item (c) sintonizacion de hiperparametros con Optuna/TPE (25 trials, semilla 42)
+  \item (d) restricciones cinematicas + penalizacion fija de 1000
+\end{itemize}
+
+Todas las rutas citadas son relativas a \code{optimizacion/}. Los numeros de
+linea corresponden al estado del codigo auditado en la rama
+\code{feat/optimizacion-ed-vs-ga}.
+
+\section{Resumen ejecutivo}
+
+La optimizacion completa \textbf{ya esta alineada} con la parcial en los cuatro
+ejes. La completa reutiliza exactamente el mismo planteamiento (misma estructura
+de funcion objetivo, misma penalizacion de monotonicidad, mismo flujo Optuna/TPE
+de dos etapas con las mismas semillas y rangos, y el mismo esquema de
+restricciones con penalizacion 1000) y lo \textbf{extiende} de forma coherente
+para cubrir la falange distal: agrega el termino de punta (W\_TIP), el perfil
+angular DIP (W\_DIP), la monotonicidad de la punta, el tercer mecanismo de cuatro
+barras y el tope fisiologico DIP.
+
+\textbf{No se requirio ninguna correccion funcional.} El codigo es consistente
+entre ambas versiones y las diferencias que existen son extensiones deliberadas y
+documentadas, no inconsistencias. Se verifico por smoke que la
+\code{fitness\_function} de ambos modelos devuelve un float finito sobre sus
+parametros de referencia (ver el detalle del vector \code{p\_ref} en la seccion
+de verificacion smoke, mas abajo).
+
+La tercera etapa que da movimiento a la falange distal se implementa como un
+mecanismo de \textbf{cuatro barras}, de forma consistente en todo el codigo
+(usuario confirmado).
+
+\section{Comparacion por criterio (resumen)}
+
+\begin{description}[leftmargin=0em,style=nextline]
+  \item[(a) Funcion objetivo]\hfill
+    \begin{itemize}[leftmargin=1.4em,nosep]
+      \item \emph{Parcial (simplificado):} Chamfer ponderada IFP/IFD
+            (\code{W\_IFP=0.40}, \code{W\_IFD=0.60}); reg suave
+            \code{W\_REG\_DIM=W\_REG\_AUX=5e-4}.
+      \item \emph{Completa:} Chamfer ponderada IFP/IFD/punta
+            (\code{W\_IFP=0.25}, \code{W\_IFD=0.375}, \code{W\_TIP=0.375});
+            ademas perfil DIP \code{W\_DIP=0.3}; misma reg suave.
+      \item \emph{Veredicto:} alineado + extendido a la falange distal.
+    \end{itemize}
+  \item[(b) Monotonicidad]\hfill
+    \begin{itemize}[leftmargin=1.4em,nosep]
+      \item \emph{Parcial:} \code{monotonicity\_penalty} con \code{W\_MONO=5.0},
+            aplicada a IFD.
+      \item \emph{Completa:} \code{monotonicity\_penalty} con \code{W\_MONO=5.0},
+            aplicada a IFD y punta.
+      \item \emph{Veredicto:} alineado + extendido.
+    \end{itemize}
+  \item[(c) Optuna/TPE]\hfill
+    \begin{itemize}[leftmargin=1.4em,nosep]
+      \item \emph{Parcial:} 2 etapas, \code{N\_TRIALS\_OPTUNA=25},
+            \code{OPTUNA\_SEED=42}, \code{OPT\_SEED=42}; mismos rangos (strategy,
+            popsize 15--30, mut\_low, mut\_high, recombination).
+      \item \emph{Completa:} idem, mismos trials/semillas/rangos; unica diferencia
+            deliberada: \code{polish=False} durante la busqueda corta.
+      \item \emph{Veredicto:} alineado (diferencia documentada).
+    \end{itemize}
+  \item[(d) Restricciones + penalizacion]\hfill
+    \begin{itemize}[leftmargin=1.4em,nosep]
+      \item \emph{Parcial:} validaciones cinematicas + penalizacion fija 1000 +
+            \code{validar\_cinematica()}.
+      \item \emph{Completa:} mismas validaciones + penalizacion 1000; agrega
+            tercer 4 barras (\code{circle\_intersections}$\to$D3, calibracion
+            \code{gamma\_bracket3}) y tope \code{DIP\_MAX\_DEG=35}.
+      \item \emph{Veredicto:} alineado + extendido.
+    \end{itemize}
+\end{description}
+
+\section{Hallazgos detallados}
+
+\subsection{(a) Funcion objetivo}
+
+La estructura de la funcion objetivo es la misma en ambos modelos: Chamfer por
+articulacion + penalizacion de monotonicidad + regularizacion suave +
+penalizacion fija de 1000 si el mecanismo no ensambla.
+
+Parcial (\code{modelo\_simplificado.py}):
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Pesos: \code{W\_IFP = 0.40}, \code{W\_IFD = 0.60}, \code{W\_MONO = 5.0}
+        (lineas 72--74).
+  \item Regularizacion suave: \code{W\_REG\_DIM = 5e-4}, \code{W\_REG\_AUX = 5e-4}
+        (lineas 77--78).
+  \item \code{fitness\_function} (lineas 255--277): alinea rigidamente mocap
+        contra sim (\code{optimal\_rigid\_transform}), calcula \code{err\_ifp} y
+        \code{err\_ifd} con \code{chamfer\_distance}, \code{mono\_ifd} con
+        \code{monotonicity\_penalty}, y suma
+        \code{shape\_error = W\_IFP*err\_ifp + W\_IFD*err\_ifd},
+        \code{mono\_error = W\_MONO*mono\_ifd}, mas \code{reg\_dim} y
+        \code{reg\_aux}. Penaliza con \code{1000.0} si \code{run\_kinematics}
+        regresa \code{None} (linea 258).
+\end{itemize}
+
+Completa (\code{modelo\_completo.py}):
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Pesos: \code{W\_IFP = 0.25}, \code{W\_IFD = 0.375}, \code{W\_TIP = 0.375},
+        \code{W\_MONO = 5.0}, \code{W\_DIP = 0.3} (lineas 81--85).
+  \item Misma regularizacion suave: \code{W\_REG\_DIM = 5e-4},
+        \code{W\_REG\_AUX = 5e-4} (lineas 87--88).
+  \item \code{fitness\_function} (lineas 250--282): misma alineacion rigida;
+        calcula \code{err\_ifp}, \code{err\_ifd} y ademas \code{err\_tip} (punta)
+        con \code{chamfer\_distance}; \code{mono\_ifd} y \code{mono\_tip}; un
+        termino de error de perfil DIP \code{dip\_error} (lineas 270--271)
+        escalado por \code{W\_DIP}; suma
+        \code{shape\_error = W\_IFP*err\_ifp + W\_IFD*err\_ifd + W\_TIP*err\_tip},
+        \code{mono\_error = W\_MONO*(mono\_ifd + mono\_tip)},
+        \code{dip\_pen = W\_DIP*dip\_error}, mas la misma \code{reg\_dim} y
+        \code{reg\_aux}. Penaliza con \code{1000.0} si no ensambla (linea 254).
+\end{itemize}
+
+\textbf{Veredicto:} consistente. La completa mantiene el planteamiento de la
+parcial y lo extiende con el termino de punta y el perfil DIP para cubrir la
+falange distal. Los pesos IFP/IFD/punta suman 1.0 en la completa (0.25 + 0.375 +
+0.375) y IFP/IFD suman 1.0 en la parcial (0.40 + 0.60), de modo que ambas
+reparten la misma unidad de peso de forma coherente.
+
+\subsection{(b) Penalizacion de monotonicidad}
+
+La funcion \code{monotonicity\_penalty} esta definida una sola vez en
+\code{comun.py} (lineas 127--137) y la usan ambos modelos con el mismo peso
+\code{W\_MONO = 5.0}:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Parcial: \code{mono\_ifd = monotonicity\_penalty(aligned['ifd'])} y
+        \code{mono\_error = W\_MONO * mono\_ifd}
+        (\code{modelo\_simplificado.py}, lineas 267 y 270).
+  \item Completa: \code{mono\_ifd = monotonicity\_penalty(aligned['ifd'])},
+        \code{mono\_tip = monotonicity\_penalty(aligned['tip'])} y
+        \code{mono\_error = W\_MONO * (mono\_ifd + mono\_tip)}
+        (\code{modelo\_completo.py}, lineas 265--266 y 274).
+\end{itemize}
+
+Ademas, ambos modelos aplican una restriccion anti-gancho dura sobre el angulo de
+la falange medial durante el barrido (\code{delta\_fm < -np.deg2rad(0.5)}
+$\to$ \code{None}): \code{modelo\_simplificado.py} lineas 232--233 (dentro de
+\code{run\_kinematics}) y \code{modelo\_completo.py} lineas 187--189.
+
+\textbf{Veredicto:} consistente. La completa usa la misma penalizacion y peso, y
+la extiende a la punta.
+
+\subsection{(c) Sintonizacion con Optuna/TPE}
+
+El flujo de dos etapas (Optuna/TPE para sintonizar hiperparametros + corrida
+profunda) es identico entre \code{optimizar\_simplificado\_ED.py} y
+\code{optimizar\_completo\_ED.py}.
+
+Presupuesto y semillas (identicos):
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Parcial (\code{optimizar\_simplificado\_ED.py}, lineas 45--49):
+        \code{N\_TRIALS\_OPTUNA=25}, \code{DE\_MAXITER\_OPTUNA=40},
+        \code{OPT\_MAXITER=300}, \code{OPT\_SEED=42}, \code{OPTUNA\_SEED=42}.
+  \item Completa (\code{optimizar\_completo\_ED.py}, lineas 44--48):
+        \code{N\_TRIALS\_OPTUNA=25}, \code{DE\_MAXITER\_OPTUNA=60},
+        \code{OPT\_MAXITER=600}, \code{OPT\_SEED=42}, \code{OPTUNA\_SEED=42}.
+\end{itemize}
+
+Los trials y ambas semillas coinciden (25 trials, semilla 42 para el sampler TPE
+y para la ED). El presupuesto por trial y el de la corrida profunda son mayores
+en la completa (60 vs 40, 600 vs 300), lo cual es esperable por el mayor tamano
+del problema (21 vs 16 parametros); no afecta la simetria del metodo.
+
+Rangos de sugerencia de Optuna (identicos): en ambos \code{objective\_optuna} se
+sugieren los mismos hiperparametros con los mismos rangos: \code{strategy} en
+\code{['best1bin','rand1bin','best1exp','currenttobest1bin']}, \code{popsize} en
+\code{[15, 30]}, \code{mut\_low} en \code{[0.3, 0.7]}, \code{mut\_high} en
+\code{[0.8, 1.2]}, \code{recombination} en \code{[0.5, 0.95]}
+(\code{optimizar\_simplificado\_ED.py} lineas 73--78;
+\code{optimizar\_completo\_ED.py} lineas 78--83).
+
+Sampler y estudio (identicos): ambos usan
+\code{optuna.samplers.TPESampler(seed=OPTUNA\_SEED)} y
+\code{optuna.create\_study(direction='minimize', ...)}
+(\code{optimizar\_simplificado\_ED.py} lineas 90--91;
+\code{optimizar\_completo\_ED.py} lineas 95--96).
+
+Diferencia deliberada y documentada: en la completa, la funcion \code{\_correr\_ed}
+acepta un parametro \code{polish} (por defecto \code{True}) y
+\code{objective\_optuna} lo llama con \code{polish=False} durante la busqueda
+corta (\code{optimizar\_completo\_ED.py} lineas 52--66 y 85--86). El docstring
+justifica que el pulido local L-BFGS es costoso con 21 parametros y solo hace
+falta en la corrida profunda final; la sintonizacion solo necesita comparar
+hiperparametros de forma relativa. La corrida profunda si usa \code{polish=True}
+(valor por defecto al llamar \code{\_correr\_ed} sin el argumento,
+\code{optimizar\_completo\_ED.py} linea 139). En la parcial, la ED usa
+\code{polish=True} siempre (\code{optimizar\_simplificado\_ED.py} lineas 53--61).
+Esta es una optimizacion de costo, no un cambio de metodo, y esta documentada en
+el codigo.
+
+Runner legacy \code{optimizar\_tercer\_mecanismo.py}: este script NO usa Optuna.
+Es un runner heredado que fija los hiperparametros a mano:
+\code{strategy='best1bin'}, \code{popsize=22}, \code{mutation=(0.5, 1.0)},
+\code{recombination=0.7} (\code{optimizar\_tercer\_mecanismo.py} lineas 38--40
+para los defaults por entorno y lineas 59--65 para la llamada a
+\code{differential\_evolution}). Importa el modelo heredado
+\code{exo\_18\_pinza\_fina.py}. La via ``alineada con la parcial'' para la
+optimizacion completa es la pareja \code{optimizar\_completo\_ED.py} +
+\code{modelo\_completo.py}; \code{optimizar\_tercer\_mecanismo.py} +
+\code{exo\_18\_pinza\_fina.py} es el camino legacy que se conserva como
+referencia historica.
+
+\textbf{Veredicto:} consistente. La via canonica de la completa
+(\code{optimizar\_completo\_ED.py}) usa el mismo Optuna/TPE con los mismos trials,
+semillas y rangos que la parcial; la unica diferencia (\code{polish=False} en la
+busqueda) es deliberada y esta documentada. El runner legacy sin Optuna existe en
+paralelo y no compite con la via canonica.
+
+\subsection{(d) Restricciones cinematicas + penalizacion fija 1000}
+
+Ambos modelos comparten el mismo esquema de restricciones dentro de
+\code{run\_kinematics} y \code{validar\_cinematica}:
+
+Validaciones basicas de parametros (regresan \code{None} $\to$ penalizacion 1000):
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \code{gear\_ratio <= 0}: \code{modelo\_simplificado.py} linea 103;
+        \code{modelo\_completo.py} linea 104.
+  \item longitudes minimas \code{min(p[:11]) <= 0.005}:
+        \code{modelo\_simplificado.py} linea 105; \code{modelo\_completo.py}
+        linea 106.
+  \item \code{hsp <= 0 or dsp <= 0}: \code{modelo\_simplificado.py} linea 107;
+        \code{modelo\_completo.py} linea 112.
+  \item \code{FP\_REAL - 2.0*dsp <= 0.001}: \code{modelo\_simplificado.py}
+        linea 109; \code{modelo\_completo.py} linea 114.
+\end{itemize}
+
+Restriccion anti-gancho de la medial (\code{delta\_fm >= -0.5 deg}):
+\code{modelo\_simplificado.py} lineas 231--233; \code{modelo\_completo.py}
+lineas 187--189.
+
+Chequeos de finitud/rango de la trayectoria de salida (\code{abs > 0.3} o no
+finito $\to$ \code{None}): \code{modelo\_simplificado.py} lineas 237--239 (IFD);
+\code{modelo\_completo.py} lineas 224--226 (punta).
+
+\code{validar\_cinematica()} sobre todo el barrido: comprueba no-ensamble, no
+finitud, que se resuelvan las \code{N\_PUNTOS} poses y la monotonicidad de
+\code{theta\_fm} (\code{modelo\_simplificado.py} lineas 308--353;
+\code{modelo\_completo.py} lineas 318--358).
+
+Penalizacion fija de 1000: \code{return 1000.0} cuando \code{run\_kinematics}
+regresa \code{None} en \code{fitness\_function} de ambos
+(\code{modelo\_simplificado.py} linea 258; \code{modelo\_completo.py} linea 254).
+
+Extensiones de la completa (falange distal):
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Validaciones extra del tercer mecanismo:
+        \code{Link9\_3 <= 0.005 or Link10\_3 <= 0.005} y \code{up3\_3 <= 0}
+        (\code{modelo\_completo.py} lineas 108--110).
+  \item Tercer mecanismo de cuatro barras: calcula el punto de anclaje \code{Pa},
+        resuelve \code{D3} por interseccion de circulos
+        (\code{circle\_intersections}) y calibra \code{gamma\_bracket3} en la
+        primera pose ensamblable (\code{modelo\_completo.py} lineas 208--218). Si
+        los circulos no intersectan, regresa \code{None} (linea 211), lo que
+        dispara la penalizacion 1000.
+  \item Tope fisiologico DIP: \code{DIP\_MAX\_DEG = 35.0} (linea 35) y la
+        restriccion \code{if np.ptp(dip\_rel) > np.deg2rad(DIP\_MAX\_DEG): return None}
+        (lineas 234--236), que tambien deriva en penalizacion 1000.
+\end{itemize}
+
+\textbf{Veredicto:} consistente. La completa hereda todas las restricciones de la
+parcial (con la misma penalizacion fija 1000) y agrega las propias del tercer
+mecanismo y del tope DIP.
+
+\section{Tercera etapa: mecanismo de cuatro barras (falange distal)}
+
+Al modelo original se le agrego una tercera etapa para dar movimiento a la
+falange distal respecto a la proximal, incorporada al analisis cinematico. Esa
+tercera etapa se implementa como un mecanismo de \textbf{cuatro barras}, de forma
+consistente en todo el codigo:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \code{modelo\_completo.py} linea 9: comentario de encabezado
+        \code{ETAPA 3 (4 barras) -> falange distal (articulacion IFD/DIP)}.
+  \item \code{modelo\_completo.py} linea 22: \code{Vector de diseno: 21
+        parametros (17 del mecanismo base + 4 del tercer 4 barras)}.
+  \item \code{modelo\_completo.py} linea 73: comentario \code{\# --- Tercer
+        mecanismo de 4 barras (cinematica IFD/DIP) ---}.
+  \item La cinematica del tercer mecanismo usa cuatro parametros dimensionales
+        (\code{Link9\_3} acoplador, \code{Link10\_3} balancin, \code{back3\_3}
+        soporte, \code{up3\_3} standoff dorsal; ver bounds en
+        \code{modelo\_completo.py} lineas 74--77 y NOMBRES en lineas 55--56) y
+        resuelve el lazo con \code{circle\_intersections}
+        (\code{modelo\_completo.py} lineas 209--218).
+  \item \code{optimizar\_completo\_ED.py} lineas 114 y 193 tambien lo describen
+        como ``tercer 4 barras''.
+  \item \code{optimizar\_tercer\_mecanismo.py} lineas 5, 13 y 156 lo describen
+        como ``4 barras'' e ``Indices ... tercer mecanismo de 4 barras IFD/DIP''.
+  \item \code{exo\_18\_pinza\_fina.py} (modelo legacy) lo describe igual:
+        lineas 195, 221, 487, 618 y 670 (``tercer mecanismo de 4 barras''), con
+        la misma parametrizacion
+        \code{Link9\_3}/\code{Link10\_3}/\code{back3\_3}/\code{up3\_3} y el solver
+        \code{\_circle\_intersections} (definido en linea 192, usado en linea 372)
+        y la calibracion \code{gamma\_bracket3} (lineas 380--383).
+\end{itemize}
+
+\section{Correcciones aplicadas}
+
+\textbf{Ninguna.} No se aplico ningun cambio funcional al codigo.
+
+Justificacion con evidencia:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item (a) Funcion objetivo: los pesos y la estructura son consistentes
+        (\code{modelo\_simplificado.py} lineas 72--78 y 255--277;
+        \code{modelo\_completo.py} lineas 81--88 y 250--282). La completa
+        extiende, no contradice.
+  \item (b) Monotonicidad: misma funcion y peso \code{W\_MONO=5.0}
+        (\code{comun.py} lineas 127--137; \code{modelo\_simplificado.py}
+        lineas 267--270; \code{modelo\_completo.py} lineas 265--274).
+  \item (c) Optuna: mismos trials (25), mismas semillas (42, 42) y mismos rangos
+        de sugerencia (\code{optimizar\_simplificado\_ED.py} lineas 45--49 y
+        73--91; \code{optimizar\_completo\_ED.py} lineas 44--48 y 78--96); la
+        unica diferencia (\code{polish=False} en la busqueda) es deliberada y
+        esta documentada en el docstring de \code{\_correr\_ed}.
+  \item (d) Restricciones: mismo conjunto de validaciones y misma penalizacion
+        1000 (referencias de linea en la seccion (d)).
+\end{itemize}
+
+Verificacion smoke (sin excepcion, float finito) sobre los parametros de
+referencia, ejecutada tras la auditoria.
+
+Modelo completo: se usa el vector \code{p\_ref} del bloque \code{main} de
+\code{optimizar\_completo\_ED.py} (lineas 117--120), es decir
+
+\begin{verbatim}
+p_ref = [0.018, 0.020, 0.035, 0.049, 0.025, 0.020, 0.025,
+         0.055, 0.035, 0.052, 0.04601, 0.017, 0.018,
+         np.deg2rad(51.39), np.deg2rad(38.78), 2.0, np.deg2rad(109),
+         0.025, 0.035, -0.012, 0.002]
+\end{verbatim}
+
+Con ese vector, \code{modelo\_completo.fitness\_function(p\_ref)} = 0.036594
+(float finito). El valor es reproducible con solo copiar ese \code{p\_ref}.
+
+Modelo simplificado: \code{modelo\_simplificado.fitness\_function(p)} devuelve un
+float finito (sin excepcion) para un vector de 16 parametros dentro de los bounds
+declarados en \code{modelo\_simplificado.py}; el valor numerico exacto depende
+del vector elegido y no se fija aqui. Lo verificable y reproducible es que la
+funcion devuelve un float finito. Un vector de prueba valido es el que se usa en
+el smoke de la entrega (FEAT-001):
+
+\begin{verbatim}
+[0.02, 0.04, 0.03, 0.05, 0.025, 0.02, 0.03, 0.05,
+ 0.035, 0.05, 0.033, 0.017, 0.008, 0.7, 3.0, -1.4]
+\end{verbatim}
+
+Como no se toco ningun \code{.py}, la \code{fitness\_function} de ambos modelos
+sigue devolviendo un float finito.
+
+\section{Recomendaciones}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Mantener \code{optimizar\_completo\_ED.py} como la via canonica de la
+        optimizacion completa (es la alineada con la parcial via Optuna).
+        Documentar en la entrega que \code{optimizar\_tercer\_mecanismo.py} +
+        \code{exo\_18\_pinza\_fina.py} es el camino legacy con hiperparametros
+        fijos, conservado como referencia.
+  \item Dejar constancia en la redaccion de la tesis/articulo de la diferencia
+        deliberada \code{polish=False} durante la sintonizacion de la completa,
+        para que la comparacion metodologica quede documentada.
+  \item Si en algun momento se desea simetria total del pulido, se podria activar
+        \code{polish=True} tambien en la busqueda de la completa, pero no es
+        necesario para la validez de la comparacion y encarece la sintonizacion.
+\end{enumerate}
+
+\end{document}

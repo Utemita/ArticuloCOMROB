@@ -32,10 +32,9 @@ documentadas, no inconsistencias. Se verifico por smoke que la
 parametros de referencia (ver el detalle del vector `p_ref` en la seccion de
 verificacion smoke, mas abajo).
 
-Punto que requiere confirmacion del usuario: el usuario describio la tercera
-etapa como "3 barras", pero el codigo la implementa de forma consistente como un
-mecanismo de **cuatro barras**. Se detalla en la seccion correspondiente. No se
-cambio el codigo por esta discrepancia.
+La tercera etapa que da movimiento a la falange distal se implementa como un
+mecanismo de **cuatro barras**, de forma consistente en todo el codigo (usuario
+confirmado).
 
 ## Tabla comparativa por criterio
 
@@ -215,14 +214,12 @@ Extensiones de la completa (falange distal):
 parcial (con la misma penalizacion fija 1000) y agrega las propias del tercer
 mecanismo y del tope DIP.
 
-## Discrepancia destacada: tercera etapa "3 barras" (usuario) vs "4 barras" (codigo)
+## Tercera etapa: mecanismo de cuatro barras (falange distal)
 
-El usuario indico que al modelo original se le agrego una "tercera etapa de 3
-barras" para dar movimiento a la falange distal respecto a la proximal, y que se
-incorporo al analisis cinematico.
-
-El codigo, de forma **consistente**, implementa esa tercera etapa como un
-mecanismo de **cuatro barras**, no de tres:
+Al modelo original se le agrego una tercera etapa para dar movimiento a la
+falange distal respecto a la proximal, incorporada al analisis cinematico. Esa
+tercera etapa se implementa como un mecanismo de **cuatro barras**, de forma
+consistente en todo el codigo:
 
 - `modelo_completo.py` linea 9: comentario de encabezado
   `ETAPA 3 (4 barras) -> falange distal (articulacion IFD/DIP)`.
@@ -244,20 +241,6 @@ mecanismo de **cuatro barras**, no de tres:
   parametrizacion `Link9_3`/`Link10_3`/`back3_3`/`up3_3` y el solver
   `_circle_intersections` (definido en linea 192, usado en linea 372) y la
   calibracion `gamma_bracket3` (lineas 380-383).
-
-**Punto a confirmar por el usuario:** existe una diferencia de nomenclatura o de
-conteo entre lo que el usuario describe (3 barras) y lo que el codigo implementa
-(4 barras). Posibles lecturas, a confirmar por el usuario:
-
-- Que el usuario cuente solo los eslabones moviles nuevos y no la bancada/soporte
-  (un cuatro barras clasico tiene un eslabon fijo mas tres moviles, por lo que
-  "3 barras moviles" y "4 barras" pueden referirse al mismo mecanismo).
-- Que el mecanismo fisico real sea de tres barras y el codigo lo modele como un
-  cuatro barras equivalente.
-
-Esta auditoria documenta el hecho tal como esta en el codigo (cuatro barras) y
-**no modifica el codigo** por esta discrepancia. Se recomienda que el usuario
-confirme la nomenclatura deseada antes de fijar la redaccion en la tesis/articulo.
 
 ## Correcciones aplicadas
 
@@ -308,11 +291,7 @@ devolviendo un float finito.
 
 ## Recomendaciones
 
-1. Confirmar con el usuario la nomenclatura de la tercera etapa (3 barras vs 4
-   barras). El codigo es internamente consistente con "4 barras"; si la tesis
-   debe decir "3 barras", aclarar si se refiere a eslabones moviles o ajustar la
-   redaccion. No cambiar el codigo hasta tener esa confirmacion.
-2. Mantener `optimizar_completo_ED.py` como la via canonica de la optimizacion
+1. Mantener `optimizar_completo_ED.py` como la via canonica de la optimizacion
    completa (es la alineada con la parcial via Optuna). Documentar en la entrega
    que `optimizar_tercer_mecanismo.py` + `exo_18_pinza_fina.py` es el camino
    legacy con hiperparametros fijos, conservado como referencia.
